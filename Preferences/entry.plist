@@ -1,0 +1,11 @@
+{
+    entry = {
+	bundle = Asos;
+	cell = PSLinkCell;
+	detail = AsosListController;
+	icon = Asos.png;
+	isController = 1;
+	label = Asos;
+    };
+    
+}
