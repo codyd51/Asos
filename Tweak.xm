@@ -1,6 +1,9 @@
 
 #import <notify.h>
+//#import <SpringBoardServices/SpringBoardServices.h>
+#include <dlfcn.h>
 #define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
+extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
 @protocol SBUIPasscodeLockViewDelegate <NSObject>
 @optional
 - (void)passcodeLockViewCancelButtonPressed:(id)pressed;
@@ -303,6 +306,7 @@ void loadPreferences() {
 id scroller;
 int indexTapped;
 
+
 %hook SBAppSliderController
 - (id)init {
 	appSlider = self;
@@ -318,7 +322,9 @@ int indexTapped;
 		appToOpen = [openApps objectAtIndex:tapped];
 		NSLog(@"itemTapped: %@", appToOpen);
 		if ([lockedApps containsObject:appToOpen]) {
-			[handler showPassViewWithBundleID:appToOpen andDisplayName:appToOpen toWindow:key];
+			NSString* appDisplayName = SBSCopyLocalizedApplicationNameForDisplayIdentifier(appToOpen);
+			//SBApplication* appWithDisplay = [[SBApplication alloc] initWithBundleIdentifier:appToOpen];
+			[handler showPassViewWithBundleID:appToOpen andDisplayName:appDisplayName toWindow:key];
 			/*
 			[appSlider animateDismissalToDisplayIdentifier:@"com.apple.springboard" withCompletion:^{
 			[[%c(SBUIController) sharedInstance] getRidOfAppSwitcher];
@@ -366,33 +372,6 @@ int indexTapped;
 	return openApps;
 }
 
-%new
--(void)menuUp {
-	//NSLog(@"Attemtping home button press...");
-	NSLog(@"Presenting passcode...");
-	key = [[UIApplication sharedApplication] keyWindow];
-	isFromMulti = YES;
-	passcodeView.userInteractionEnabled = YES;
-	//[handler showPassViewWithBundleID:tempString andDisplayName:tempString toWindow:key];
-	SBUIPasscodeLockViewSimple4DigitKeypad* newPasscodeView = [[%c(SBUIPasscodeLockViewSimple4DigitKeypad) alloc] init];
-	newPasscodeView.userInteractionEnabled = YES;
-	newPasscodeView.shouldResetForFailedPasscodeAttempt = YES;
-	newPasscodeView.backgroundColor = [UIColor clearColor];
-	newPasscodeView.backgroundAlpha = 0.9;
-	newPasscodeView.alpha = 1.0;
-	newPasscodeView.userInteractionEnabled = YES;
-	newPasscodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter Passcode to open TESTING"];
-	newPasscodeView.showsEmergencyCallButton = NO;
-	newPasscodeView.tag = 1337;
-	//[[UIApplication sharedApplication] _handleMenuButtonEvent];
-	//[[UIApplication sharedApplication] _menuButtonDown:menuButtonDownStamp];
-	//[[UIApplication sharedApplication] handleHomeButtonTap];
-	//[[%c(SBIconController) sharedInstance] handleHomeButtonTap];
-	//SpringBoard* spring = (SpringBoard*)[UIApplication sharedApplication];
-	//[spring _handleMenuButtonEvent];
-	//[[UIApplication sharedApplication] clickedMenuButton];
-	//[[UIApplication sharedApplication] handleMenuButtonDownEvent];
-}
 %end
 
 %hook SBLockScreenManager
@@ -411,7 +390,6 @@ void dismissToApp() {
 		[appSlider sliderScroller:scroller itemTapped:indexTapped];
 		isUnlocking = YES;
 		[appSlider animateDismissalToDisplayIdentifier:appToOpen withCompletion:nil];
-		//[[%c(SBUIController) sharedInstance] getRidOfAppSwitcher];
 		isToMulti = NO;
 	}
 }
