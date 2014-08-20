@@ -72,6 +72,7 @@
 @end
 @interface SBAppSliderController : NSObject
 - (void)animateDismissalToDisplayIdentifier:(id)arg1 withCompletion:(id)arg2;
+- (void)sliderScroller:(id)arg1 itemTapped:(unsigned long long)arg2;
 @end
 @interface SBIconController : NSObject
 +(id)sharedInstance;
@@ -81,6 +82,8 @@
 + (id)sharedInstance;
 - (void)getRidOfAppSwitcher;
 @end
+
+//typedef void(^passCompletion)(BOOL);
 
 UITextField* passcodeField;
 SBUIPasscodeLockViewSimple4DigitKeypad* passcodeView = [[%c(SBUIPasscodeLockViewSimple4DigitKeypad) alloc] init];
@@ -100,7 +103,11 @@ NSString* tempString = @"";
 NSString* userPass = @"";
 BOOL enabled = YES;
 BOOL useRealPass = YES;
+BOOL enteredCorrectPass;
+BOOL isToMulti;
+BOOL isUnlocking = YES;
 NSString* settingsPass;
+NSString* appToOpen;
 //CGRect bounds = [[UIScreen mainScreen] bounds];
 //UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:bounds];
 UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 320, 568)];
@@ -180,6 +187,9 @@ PassShower* handler = [[PassShower alloc] init];
 				[noPassAlert show];
 			}
 			if ([[self passcode] isEqualToString:passToUse]) {
+				enteredCorrectPass = YES;
+				//isUnlocking = NO;
+				notify_post("com.phillipt.asos.multitaskEscape");
 				[UIView animateWithDuration:0.4 animations:^{
 					passcodeView.statusTitleView.text = @"✓";
 					passcodeView.alpha = 0;
@@ -290,22 +300,35 @@ void loadPreferences() {
 
 %end
 
+id scroller;
+int indexTapped;
+
 %hook SBAppSliderController
 - (id)init {
 	appSlider = self;
 	return %orig;
 }
--(void)sliderScroller:(id)scroller itemTapped:(unsigned)tapped {
+-(void)sliderScroller:(id)scroller1 itemTapped:(unsigned)tapped {
 	%log;
-	NSString* appToOpen = [openApps objectAtIndex:tapped];
-	NSLog(@"itemTapped: %@", appToOpen);
-	if ([lockedApps containsObject:appToOpen]) {
-		[appSlider animateDismissalToDisplayIdentifier:@"com.apple.springboard" withCompletion:^{
+	scroller = scroller1;
+	indexTapped = tapped;
+	if (isUnlocking) {
+		isToMulti = YES;
+		key = [[UIApplication sharedApplication] keyWindow];
+		appToOpen = [openApps objectAtIndex:tapped];
+		NSLog(@"itemTapped: %@", appToOpen);
+		if ([lockedApps containsObject:appToOpen]) {
+			[handler showPassViewWithBundleID:appToOpen andDisplayName:appToOpen toWindow:key];
+			/*
+			[appSlider animateDismissalToDisplayIdentifier:@"com.apple.springboard" withCompletion:^{
 			[[%c(SBUIController) sharedInstance] getRidOfAppSwitcher];
-			}];
-		UIAlertView* lockedAlert = [[UIAlertView alloc] initWithTitle:@"Asos" message:@"This app is locked. Please open it from the homescreen to input your passcode." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil];
-		[lockedAlert show];
-		return;
+				}];
+			UIAlertView* lockedAlert = [[UIAlertView alloc] initWithTitle:@"Asos" message:@"This app is locked. Please open it from the homescreen to 	input your passcode." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil];
+			[lockedAlert show];
+			return;
+			*/
+		}
+		else %orig;
 	}
 	else %orig;
 }
@@ -382,6 +405,17 @@ void loadPreferences() {
 
 %end
 
+void dismissToApp() {
+	if (isToMulti) {
+		isUnlocking = NO;
+		[appSlider sliderScroller:scroller itemTapped:indexTapped];
+		isUnlocking = YES;
+		[appSlider animateDismissalToDisplayIdentifier:appToOpen withCompletion:nil];
+		//[[%c(SBUIController) sharedInstance] getRidOfAppSwitcher];
+		isToMulti = NO;
+	}
+}
+
 %ctor {
     CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
                                     NULL,
@@ -391,4 +425,12 @@ void loadPreferences() {
                                     CFNotificationSuspensionBehaviorDeliverImmediately);
     
     loadPreferences();
+    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+                                    NULL,
+                                    (CFNotificationCallback)dismissToApp,
+                                    CFSTR("com.phillipt.asos.multitaskEscape"),
+                                    NULL,
+                                    CFNotificationSuspensionBehaviorDeliverImmediately);
+    
+    dismissToApp();
 }
