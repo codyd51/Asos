@@ -1,6 +1,7 @@
 
 #import <notify.h>
-//#import <SpringBoardServices/SpringBoardServices.h>
+#import <QuartzCore/CALayer.h>
+#import <QuartzCore/QuartzCore.h>
 #include <dlfcn.h>
 #define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
 extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
@@ -84,6 +85,9 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 @interface SBUIController : NSObject
 + (id)sharedInstance;
 - (void)getRidOfAppSwitcher;
+@end
+@interface CAFilter : NSObject
++(instancetype)filterWithName:(NSString *)name;
 @end
 
 //typedef void(^passCompletion)(BOOL);
@@ -249,7 +253,7 @@ PassShower* handler = [[PassShower alloc] init];
 -(void)resetFailedPass {
 	[UIView animateWithDuration:0.5 animations:^{
 		passcodeView.statusTitleView.text = @"✗";
-    }];
+	}];
 	[UIView animateWithDuration:0.5 animations:^{
 		passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter Passcode to open %@", dispName];
 	}];
@@ -306,7 +310,6 @@ void loadPreferences() {
 id scroller;
 int indexTapped;
 
-
 %hook SBAppSliderController
 - (id)init {
 	appSlider = self;
@@ -338,38 +341,27 @@ int indexTapped;
 	}
 	else %orig;
 }
-/*
-- (void)animateDismissalToDisplayIdentifier:(id)arg1 withCompletion:(id)arg2 {
-	%log;
-	NSString* goToApp = (NSString*)arg1;
-	tempString = (NSString*)arg1;
-	//if ([(NSString*)arg1 isEqualToString:@"com.apple.springboard"]) %orig;
-	if ([lockedApps containsObject:goToApp]) {
-		/*
-		SpringBoard* spring = (SpringBoard*)[UIApplication sharedApplication];
-		[spring _handleMenuButtonEvent];
-		NSTimer* timer = [NSTimer scheduledTimerWithTimeInterval:4.0 target:self selector:@selector(menuUp) userInfo:nil repeats:NO];
-		key = [[UIApplication sharedApplication] keyWindow];
 
-		//dispatch_async(dispatch_get_main_queue(), ^{
-			//[handler showPassViewWithBundleID:arg1 andDisplayName:goToApp toWindow:key];
-		//});
-		%orig;
-		
-		SpringBoard* spring = (SpringBoard*)[UIApplication sharedApplication];
-		[spring _handleMenuButtonEvent];
-		[appSlider animateDismissalToDisplayIdentifier:@"com.apple.springboard" withCompletion:nil];
-		UIAlertView* lockedAlert = [[UIAlertView alloc] initWithTitle:@"Asos" message:@"This app is locked. Please open it from the homescreen to input your passcode." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil];
-		[lockedAlert show];
-	}
-	else %orig;
-	//[[UIApplication sharedApplication] _giveUpOnMenuDoubleTap];
-	//%orig;
-}
-*/
 - (id)_beginAppListAccess { 
 	openApps = %orig;
 	return openApps;
+}
+
+%end
+
+%hook SBAppSliderSnapshotView
+
++(id)appSliderSnapshotViewForApplication:(SBApplication*)application orientation:(int)orientation loadAsync:(BOOL)async withQueue:(id)queue statusBarCache:(id)cache {
+	if([lockedApps containsObject:[application bundleIdentifier]]){
+		//UIImage* padlockImage = [[[NSFileManager defaultManager] contentsOfDirectoryAtPath:@"/Library/Application Support/Asos/" error:nil] objectAtIndex:0];
+		UIImageView *snapshot = (UIImageView *) %orig();
+		CAFilter *filter = [CAFilter filterWithName:@"gaussianBlur"];
+		[filter setValue:@10 forKey:@"inputRadius"];
+		snapshot.layer.filters = [NSArray arrayWithObject:filter];
+		[snapshot addSubview:padlockImage];
+		return snapshot;
+	}
+	return %orig;
 }
 
 %end
@@ -395,20 +387,20 @@ void dismissToApp() {
 }
 
 %ctor {
-    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
-                                    NULL,
-                                    (CFNotificationCallback)loadPreferences,
-                                    CFSTR("com.phillipt.asos/settingschanged"),
-                                    NULL,
-                                    CFNotificationSuspensionBehaviorDeliverImmediately);
-    
-    loadPreferences();
-    CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
-                                    NULL,
-                                    (CFNotificationCallback)dismissToApp,
-                                    CFSTR("com.phillipt.asos.multitaskEscape"),
-                                    NULL,
-                                    CFNotificationSuspensionBehaviorDeliverImmediately);
-    
-    dismissToApp();
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+									NULL,
+									(CFNotificationCallback)loadPreferences,
+									CFSTR("com.phillipt.asos/settingschanged"),
+									NULL,
+									CFNotificationSuspensionBehaviorDeliverImmediately);
+	
+	loadPreferences();
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+									NULL,
+									(CFNotificationCallback)dismissToApp,
+									CFSTR("com.phillipt.asos.multitaskEscape"),
+									NULL,
+									CFNotificationSuspensionBehaviorDeliverImmediately);
+	
+	dismissToApp();
 }
