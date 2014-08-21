@@ -1,95 +1,4 @@
-
-#import <notify.h>
-#import <QuartzCore/CALayer.h>
-#import <QuartzCore/QuartzCore.h>
-#include <dlfcn.h>
-#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
-extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
-@protocol SBUIPasscodeLockViewDelegate <NSObject>
-@optional
-- (void)passcodeLockViewCancelButtonPressed:(id)pressed;
-- (void)passcodeLockViewEmergencyCallButtonPressed:(id)pressed;
-- (void)passcodeLockViewPasscodeDidChange:(id)passcodeLockViewPasscode;
-- (void)passcodeLockViewPasscodeEntered:(id)entered;
-- (void)passcodeLockViewPasscodeEnteredViaMesa:(id)mesa;
-@end
-@interface SBApplication : NSObject
-- (id)bundleIdentifier;
-- (id)initWithBundleIdentifier:(id)arg1 webClip:(id)arg2 path:(id)arg3 bundle:(id)arg4 infoDictionary:(id)arg5 isSystemApplication:(_Bool)arg6 signerIdentity:(id)arg7 provisioningProfileValidated:(_Bool)arg8 entitlements:(id)arg9;
-- (id)displayName;
-@end
-@interface SBIcon : NSObject
-- (void)launchFromLocation:(int)location;
-- (id)displayName;
-@end
-@interface SBApplicationIcon : NSObject
-- (void)launchFromLocation:(int)location;
-- (id)displayName;
-- (id)application;
-@end
-@interface UIApplication (Asos)
-- (BOOL)launchApplicationWithIdentifier:(id)arg1 suspended:(BOOL)arg2;
--(void)_handleMenuButtonEvent;
-- (void)_giveUpOnMenuDoubleTap;
-- (void)_menuButtonDown:(id)arg1;
-- (void)menuButtonDown:(id)arg1;
-- (BOOL)clickedMenuButton;
-- (BOOL)handleMenuButtonDownEvent;
-- (void)handleHomeButtonTap;
-- (void)_giveUpOnMenuDoubleTap;
-@end
-@interface SBUIPasscodeLockViewBase : UIView
-@property(nonatomic) _Bool shouldResetForFailedPasscodeAttempt;
-@property(nonatomic) unsigned long long biometricMatchMode;
-@property(nonatomic, getter=_luminosityBoost, setter=_setLuminosityBoost:) double luminosityBoost;
-@property(retain, nonatomic) id backgroundLegibilitySettingsProvider;
-//@property(nonatomic, getter=_entryField, setter=_setEntryField:) SBUIPasscodeEntryField *_entryField;
-@property(nonatomic, getter=_entryField, setter=_setEntryField:) id _entryField;
-@property(retain, nonatomic) UIColor *customBackgroundColor;
-@property(nonatomic) double backgroundAlpha;
-@property(nonatomic) _Bool showsStatusField;
-@property(nonatomic) _Bool showsEmergencyCallButton;
-@property(nonatomic) NSString *passcode;
-@property(nonatomic) int style;
-@property(nonatomic) id <SBUIPasscodeLockViewDelegate> delegate;
-- (void)reset;
-- (void)resetForFailedPasscode;
-@end
-@interface SBUIPasscodeLockViewWithKeypad : SBUIPasscodeLockViewBase
-@property(retain, nonatomic) UILabel *statusTitleView;
--(id)passcode;
-@end
-@interface SBUIPasscodeLockViewSimple4DigitKeypad : SBUIPasscodeLockViewWithKeypad
-@end
-@interface _UIBackdropView : UIView
-- (id)initWithFrame:(CGRect)arg1 autosizesToFitSuperview:(BOOL)arg2 settings:(id)arg3;
-- (void)setBlurQuality:(id)arg1;
-@end
-@interface _UIBackdropViewSettings : NSObject
-+ (id)settingsForPrivateStyle:(int)arg1;
-@end
-@interface PassShower : NSObject <UIAlertViewDelegate>
--(void)showPassViewWithBundleID:(NSString*)passedID andDisplayName:(NSString*)passedDisplayName toWindow:(UIView*)window;
-@end
-@interface SpringBoard : NSObject
-- (void)_handleMenuButtonEvent;
-@end
-@interface SBAppSliderController : NSObject
-- (void)animateDismissalToDisplayIdentifier:(id)arg1 withCompletion:(id)arg2;
-- (void)sliderScroller:(id)arg1 itemTapped:(unsigned long long)arg2;
-@end
-@interface SBIconController : NSObject
-+(id)sharedInstance;
--(void)handleHomeButtonTap;
-@end
-@interface SBUIController : NSObject
-+ (id)sharedInstance;
-- (void)getRidOfAppSwitcher;
-@end
-@interface CAFilter : NSObject
-+(instancetype)filterWithName:(NSString *)name;
-@end
-
+#import "Interfaces.h"
 //typedef void(^passCompletion)(BOOL);
 
 UITextField* passcodeField;
@@ -353,12 +262,23 @@ int indexTapped;
 
 +(id)appSliderSnapshotViewForApplication:(SBApplication*)application orientation:(int)orientation loadAsync:(BOOL)async withQueue:(id)queue statusBarCache:(id)cache {
 	if([lockedApps containsObject:[application bundleIdentifier]]){
-		//UIImage* padlockImage = [[[NSFileManager defaultManager] contentsOfDirectoryAtPath:@"/Library/Application Support/Asos/" error:nil] objectAtIndex:0];
-		UIImageView *snapshot = (UIImageView *) %orig();
+		UIImage* padlockImage = [UIImage imageWithContentsOfFile:@"/Library/Application Support/Asos/padlock.png"];
+		UIImageView* padlockImageView = [[UIImageView alloc] initWithImage:padlockImage];
+
+		UIImageView *snapshot = (UIImageView *)%orig();
+		NSLog(@"[Asos] Snapshot: %@", snapshot);
+		//UIImage* snapshotImage = snapshot.image;
 		CAFilter *filter = [CAFilter filterWithName:@"gaussianBlur"];
 		[filter setValue:@10 forKey:@"inputRadius"];
 		snapshot.layer.filters = [NSArray arrayWithObject:filter];
-		[snapshot addSubview:padlockImage];
+		//[snapshot addSubview:padlockImageView];
+		/*
+		UIGraphicsBeginImageContext(snapshotImage.size);
+		[snapshotImage drawInRect:CGRectMake(0, 0, snapshotImage.size.width, snapshotImage.size.height)];
+		[padlockImage drawInRect:CGRectMake(snapshotImage.size.width - padlockImage.size.width, snapshotImage.size.height - padlockImage.size.height, padlockImage.size.width, padlockImage.size.height)];
+		UIImageView *result = [[UIImageView alloc] initWithImage:UIGraphicsGetImageFromCurrentImageContext()];
+		UIGraphicsEndImageContext();
+		*/
 		return snapshot;
 	}
 	return %orig;
