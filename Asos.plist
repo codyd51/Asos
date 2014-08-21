@@ -1,1 +1,3 @@
-{ Filter = { Bundles = ( "com.apple.springboard" ); }; }
+Filter = {
+  Bundles = ( "com.apple.springboard", "com.yourcompany.stratos" );
+};

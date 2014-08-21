@@ -1,6 +1,8 @@
 #import <notify.h>
 #import <QuartzCore/CALayer.h>
 #import <QuartzCore/QuartzCore.h>
+#import <UIKit/UIKit.h>
+
 #include <dlfcn.h>
 #define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
 extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
@@ -87,4 +89,11 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 @end
 @interface CAFilter : NSObject
 +(instancetype)filterWithName:(NSString *)name;
+@end
+@interface SwitcherTrayView
++ (id)sharedInstance;
+- (void)closeTray;
+@end
+@interface SwitcherTrayCardView : UIView
+@property (nonatomic, retain) id application;
 @end

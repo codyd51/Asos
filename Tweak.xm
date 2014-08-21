@@ -122,7 +122,7 @@ PassShower* handler = [[PassShower alloc] init];
 			else {
 				//To fix the last bubble not dissapearing
 				if (!isFromMulti) {
-					NSTimer* timer = [NSTimer scheduledTimerWithTimeInterval:0.3 target:self selector:@selector(resetFailedPass) userInfo:nil repeats:NO];
+					[NSTimer scheduledTimerWithTimeInterval:0.3 target:self selector:@selector(resetFailedPass) userInfo:nil repeats:NO];
 				}
 				else {
 					UIAlertView* homeAlert = [[UIAlertView alloc] initWithTitle:@"Testing" message:@"Should exit to homescreen now." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil];
@@ -262,8 +262,8 @@ int indexTapped;
 
 +(id)appSliderSnapshotViewForApplication:(SBApplication*)application orientation:(int)orientation loadAsync:(BOOL)async withQueue:(id)queue statusBarCache:(id)cache {
 	if([lockedApps containsObject:[application bundleIdentifier]]){
-		UIImage* padlockImage = [UIImage imageWithContentsOfFile:@"/Library/Application Support/Asos/padlock.png"];
-		UIImageView* padlockImageView = [[UIImageView alloc] initWithImage:padlockImage];
+		//UIImage* padlockImage = [UIImage imageWithContentsOfFile:@"/Library/Application Support/Asos/padlock.png"];
+		//UIImageView* padlockImageView = [[UIImageView alloc] initWithImage:padlockImage];
 
 		UIImageView *snapshot = (UIImageView *)%orig();
 		NSLog(@"[Asos] Snapshot: %@", snapshot);
@@ -295,6 +295,61 @@ int indexTapped;
 }
 
 %end
+
+//Start Stratos Compatibility
+%hook SBUIController
+
+- (void)activateApplicationAnimated:(id)application {
+
+	SBApplication* app = application;
+	bundleID = [app bundleIdentifier];
+	dispName = [app displayName];
+
+	if ([lockedApps containsObject:bundleID]) {
+
+		[[NSClassFromString(@"SwitcherTrayView") sharedInstance] closeTray];
+
+		key = [[UIApplication sharedApplication] keyWindow];
+
+		if (!shouldLaunch) {
+			[handler showPassViewWithBundleID:bundleID andDisplayName:dispName toWindow:key];
+		}
+		else {
+			%orig;
+			shouldLaunch = NO;
+			[passcodeView reset];
+		}
+	}
+	else {
+		%orig;
+		shouldLaunch = NO;
+		[passcodeView reset];
+	}
+}
+
+%end
+
+%hook SwitcherTrayCardView
+
+- (id)initWithIdentifier:(NSString *)identifier {
+NSLog(@"git");
+	id tempTray = %orig;
+
+	if ([lockedApps containsObject:identifier]) {
+
+		NSLog(@"LOCKED");
+		UIView *blurView = [[UIView alloc] initWithFrame:[self frame]];
+		[blurView setBackgroundColor:[UIColor redColor]];
+		[tempTray addSubview:blurView];
+
+	}
+
+	return tempTray;
+
+}
+
+%end
+//End Stratos Compatibility
 
 void dismissToApp() {
 	if (isToMulti) {
