@@ -10,6 +10,7 @@ NSString* bundleID = @"";
 NSString* dispName = @"";
 NSMutableDictionary* prefs = [[NSMutableDictionary alloc] init];
 NSMutableArray* lockedApps = [[NSMutableArray alloc] init];
+NSMutableArray* oncePerRespring = [[NSMutableArray alloc] init];
 UIView* key = [[UIView alloc] init];
 id menuButtonDownStamp;
 BOOL isFromMulti = NO;
@@ -22,14 +23,17 @@ BOOL useRealPass = YES;
 BOOL enteredCorrectPass;
 BOOL isToMulti;
 BOOL isUnlocking = YES;
+BOOL onceRespring = NO;
 NSString* settingsPass;
 NSString* appToOpen;
+NSString* currentlyOpening;
 //CGRect bounds = [[UIScreen mainScreen] bounds];
 //UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:bounds];
 UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 320, 568)];
 
 @implementation PassShower
 -(void)showPassViewWithBundleID:(NSString*)passedID andDisplayName:(NSString*)passedDisplayName toWindow:(UIView*)window {
+	passedID = currentlyOpening;
 	passcodeView.userInteractionEnabled = YES;
 	passcodeView.shouldResetForFailedPasscodeAttempt = YES;
 	passcodeView.backgroundColor = [UIColor clearColor];
@@ -61,9 +65,10 @@ PassShower* handler = [[PassShower alloc] init];
 	SBApplication* app = (SBApplication*)[self application];
 	NSLog(@"%@", [app bundleIdentifier]);
 	bundleID = [app bundleIdentifier];
+	currentlyOpening = bundleID;
 	dispName = [self displayName];
 
-	if ([lockedApps containsObject:bundleID]) {
+	if ([lockedApps containsObject:bundleID] && ![oncePerRespring containsObject:bundleID]) {
 		key = [[UIApplication sharedApplication] keyWindow];
 
 		if (!shouldLaunch) {
@@ -98,6 +103,8 @@ PassShower* handler = [[PassShower alloc] init];
 			}
 			if ([[self passcode] isEqualToString:passToUse]) {
 				enteredCorrectPass = YES;
+				if (onceRespring) [lockedApps removeObject:currentlyOpening];
+				if (onceRespring) [oncePerRespring addObject:currentlyOpening];
 				//isUnlocking = NO;
 				notify_post("com.phillipt.asos.multitaskEscape");
 				[UIView animateWithDuration:0.4 animations:^{
@@ -186,6 +193,7 @@ void loadPreferences() {
 	}
 	if ([prefs objectForKey:@"enabled"] != nil) enabled = [[prefs objectForKey:@"enabled"] boolValue];
 	if ([prefs objectForKey:@"useRealPass"] != nil) useRealPass = [[prefs objectForKey:@"useRealPass"] boolValue];
+	if ([prefs objectForKey:@"onceRespring"] != nil) onceRespring = [[prefs objectForKey:@"onceRespring"] boolValue];
 	settingsPass = [prefs objectForKey:@"passcode"];
 }
 
@@ -351,26 +359,6 @@ void dismissToApp() {
 	}
 }
 
-void prefsShow() {
-	//UIWindow* sbWindow = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-	//sbWindow.windowLevel = 1500;
-	//[sbWindow makeKeyAndVisible];
-	//key = [[UIApplication sharedApplication] keyWindow];
-/*	UIViewController* viewController = [[UIViewController alloc] initWithNibName:nil bundle:nil];
-	UIView* sbWindow = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-	[viewController setView:sbWindow];
-	[[self navigationController] pushViewController:viewController];
-
-	[sbWindow setHidden:NO];
-	[sbWindow setAlpha:1.0];
-	[sbWindow setBackgroundColor:[UIColor blueColor]];
-	UILabel* testLabel = [[UILabel alloc] initWithFrame:sbWindow.frame];
-	testLabel.text = @"This is a test. Testing, testing, 1, 2, 3.";
-	testLabel.textColor = [UIColor blackColor];
-	[sbWindow addSubview:testLabel];
-	[handler showPassViewWithBundleID:nil andDisplayName:@"Asos Settings" toWindow:sbWindow];
-*/
-}
 
 %ctor {
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
@@ -389,10 +377,4 @@ void prefsShow() {
 									CFNotificationSuspensionBehaviorDeliverImmediately);
 	
 	dismissToApp();
-	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
-									NULL,
-									(CFNotificationCallback)prefsShow,
-									CFSTR("com.phillipt.asos.prefsShow"),
-									NULL,
-									CFNotificationSuspensionBehaviorDeliverImmediately);
 }

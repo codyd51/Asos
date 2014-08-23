@@ -18,9 +18,6 @@ UIView* sbWindow;
 - (id)specifiers {
 	prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
 
-	NSLog(@"[Asos] notify_post from specifiers");
-	notify_post("com.phillipt.asos.prefsShow");
-
 	sbWindow = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
 	[self.view addSubview:sbWindow];
 	[sbWindow setBackgroundColor:[UIColor clearColor]];
