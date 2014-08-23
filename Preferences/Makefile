@@ -2,9 +2,9 @@ ARCHS = armv7 arm64
 include theos/makefiles/common.mk
 
 BUNDLE_NAME = Asos
-Asos_FILES = Asos.mm
+Asos_FILES = Asos.xm
 Asos_INSTALL_PATH = /Library/PreferenceBundles
-Asos_FRAMEWORKS = UIKit
+Asos_FRAMEWORKS = UIKit CoreGraphics QuartzCore AudioToolbox
 Asos_PRIVATE_FRAMEWORKS = Preferences
 Asos_LIBRARIES=applist
 

@@ -30,8 +30,6 @@ UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 320, 56
 
 @implementation PassShower
 -(void)showPassViewWithBundleID:(NSString*)passedID andDisplayName:(NSString*)passedDisplayName toWindow:(UIView*)window {
-	//[[UIApplication sharedApplication] _giveUpOnMenuDoubleTap];
-	//[[UIApplication sharedApplication] _handleMenuButtonEvent];
 	passcodeView.userInteractionEnabled = YES;
 	passcodeView.shouldResetForFailedPasscodeAttempt = YES;
 	passcodeView.backgroundColor = [UIColor clearColor];
@@ -53,11 +51,6 @@ UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 320, 56
 		passcodeView.alpha = 1.0;
 		blurView.alpha = 1.0;
 	}];
-}
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-	SpringBoard* spring = (SpringBoard*)[UIApplication sharedApplication];
-	[spring _handleMenuButtonEvent];
-	//[appSlider animateDismissalToDisplayIdentifier:@"com.apple.springboard" withCompletion:nil];
 }
 @end
 
@@ -94,6 +87,7 @@ PassShower* handler = [[PassShower alloc] init];
 
 - (void)passcodeEntryFieldTextDidChange:(id)arg1 {
 	NSString* passToUse;
+	NSLog(@"%@", prefs); 
 	if ([self tag] == 1337) {
 		if ([[self passcode] length] == 4) {
 			if (useRealPass) passToUse = userPass;
@@ -290,7 +284,13 @@ int indexTapped;
 
 - (BOOL)attemptUnlockWithPasscode:(id)arg1 {
 	BOOL didSucceed = %orig;
-	if (didSucceed) userPass = (NSString*)arg1;
+	if (didSucceed) {
+		prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
+		userPass = (NSString*)arg1;
+		[(NSMutableDictionary*)prefs setObject:userPass forKey:@"userPass"];
+		[(NSMutableDictionary*)prefs writeToFile:kSettingsPath atomically:YES];
+		NSLog(@"%@", prefs);
+	}
 	return didSucceed;
 }
 
@@ -300,17 +300,13 @@ int indexTapped;
 %hook SBUIController
 
 - (void)activateApplicationAnimated:(id)application {
-
 	SBApplication* app = application;
 	bundleID = [app bundleIdentifier];
 	dispName = [app displayName];
 
 	if ([lockedApps containsObject:bundleID]) {
-
-		[[NSClassFromString(@"SwitcherTrayView") sharedInstance] closeTray];
-
+		[[%c(SwitcherTrayView) sharedInstance] closeTray];
 		key = [[UIApplication sharedApplication] keyWindow];
-
 		if (!shouldLaunch) {
 			[handler showPassViewWithBundleID:bundleID andDisplayName:dispName toWindow:key];
 		}
@@ -332,18 +328,12 @@ int indexTapped;
 %hook SwitcherTrayCardView
 
 - (id)initWithIdentifier:(NSString *)identifier {
-NSLog(@"git");
 	id tempTray = %orig;
-
 	if ([lockedApps containsObject:identifier]) {
-
-		NSLog(@"LOCKED");
 		UIView *blurView = [[UIView alloc] initWithFrame:[self frame]];
 		[blurView setBackgroundColor:[UIColor redColor]];
 		[tempTray addSubview:blurView];
-
 	}
-
 	return tempTray;
 
 }
@@ -359,6 +349,27 @@ void dismissToApp() {
 		[appSlider animateDismissalToDisplayIdentifier:appToOpen withCompletion:nil];
 		isToMulti = NO;
 	}
+}
+
+void prefsShow() {
+	//UIWindow* sbWindow = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+	//sbWindow.windowLevel = 1500;
+	//[sbWindow makeKeyAndVisible];
+	//key = [[UIApplication sharedApplication] keyWindow];
+/*	UIViewController* viewController = [[UIViewController alloc] initWithNibName:nil bundle:nil];
+	UIView* sbWindow = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+	[viewController setView:sbWindow];
+	[[self navigationController] pushViewController:viewController];
+
+	[sbWindow setHidden:NO];
+	[sbWindow setAlpha:1.0];
+	[sbWindow setBackgroundColor:[UIColor blueColor]];
+	UILabel* testLabel = [[UILabel alloc] initWithFrame:sbWindow.frame];
+	testLabel.text = @"This is a test. Testing, testing, 1, 2, 3.";
+	testLabel.textColor = [UIColor blackColor];
+	[sbWindow addSubview:testLabel];
+	[handler showPassViewWithBundleID:nil andDisplayName:@"Asos Settings" toWindow:sbWindow];
+*/
 }
 
 %ctor {
@@ -378,4 +389,10 @@ void dismissToApp() {
 									CFNotificationSuspensionBehaviorDeliverImmediately);
 	
 	dismissToApp();
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+									NULL,
+									(CFNotificationCallback)prefsShow,
+									CFSTR("com.phillipt.asos.prefsShow"),
+									NULL,
+									CFNotificationSuspensionBehaviorDeliverImmediately);
 }
