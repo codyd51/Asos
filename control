@@ -1,5 +1,6 @@
 Package: com.phillipt.asos
 Name: Asos
+Icon: Asos.png
 Depends: mobilesubstrate
 Version: 0.0.1
 Architecture: iphoneos-arm
