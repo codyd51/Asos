@@ -12,32 +12,36 @@
 UITextField *loginField;
 _UIBackdropView *blurView;
 UIView* sbWindow;
+AsosListController* controller;
+id timeInput;
 
 @implementation AsosListController
 @synthesize prefs;
 - (id)specifiers {
+	controller = self;
+	timeInput = [self specifierAtIndex:1];
+
 	prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
 
-	sbWindow = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-	[self.view addSubview:sbWindow];
-	[sbWindow setBackgroundColor:[UIColor clearColor]];
+	NSLog(@"[Asos] Prefs is %@", prefs);
+	NSLog(@"[Asos] self.prefs is %@", self.prefs);
 
-	SBUIPasscodeLockViewSimple4DigitKeypad* passcodeView = [[%c(SBUIPasscodeLockViewSimple4DigitKeypad) alloc] init];
-	passcodeView.frame = [[UIScreen mainScreen] bounds];
-	_UIBackdropViewSettings *settings = [_UIBackdropViewSettings settingsForPrivateStyle:3900];
-	blurView = [[_UIBackdropView alloc] initWithFrame:CGRectZero autosizesToFitSuperview:YES settings:settings];
+	if ([self.prefs objectForKey:@"passcode"] != nil && [self.prefs objectForKey:@"useRealPass"] != nil && [[self.prefs objectForKey:@"enabled"] boolValue] && prefs != nil && prefs.count != 0 && self.prefs.count != 0 && [[prefs objectForKey:@"enabled"] boolValue]) {
+		sbWindow = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+		[self.view addSubview:sbWindow];
+		[sbWindow setBackgroundColor:[UIColor clearColor]];
 
-	blurView.alpha = 0;
-	blurView.userInteractionEnabled=NO;
-	[blurView setBlurQuality:@"default"];
+		_UIBackdropViewSettings *settings = [_UIBackdropViewSettings settingsForPrivateStyle:3900];
+		blurView = [[_UIBackdropView alloc] initWithFrame:CGRectZero autosizesToFitSuperview:YES settings:settings];
 
-	[sbWindow addSubview:blurView];
-
-	[UIView animateWithDuration:0.4 animations:^{
-		blurView.alpha = 1.0;
-	}];
-
-	if (([self.prefs objectForKey:@"passcode"] != nil || [self.prefs objectForKey:@"useRealPass"] != nil) && [[self.prefs objectForKey:@"enabled"] boolValue]) {
+		blurView.alpha = 0;
+		blurView.userInteractionEnabled=NO;
+		[blurView setBlurQuality:@"default"];
+		[sbWindow addSubview:blurView];
+		
+		[UIView animateWithDuration:0.4 animations:^{
+			blurView.alpha = 1.0;
+		}];
 		UIAlertView* loginAlert = [[UIAlertView alloc] initWithTitle:@"Asos" message:@"Enter passcode to access Asos settings" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Ok", nil];
 		[loginAlert setAlertViewStyle:UIAlertViewStylePlainTextInput];
 		loginField = [loginAlert textFieldAtIndex:0];
@@ -51,6 +55,9 @@ UIView* sbWindow;
 	if(_specifiers == nil) {
 		_specifiers = [[self loadSpecifiersFromPlistName:@"Asos" target:self] retain];
 	}
+	NSLog(@"[Asos] specifiers is %@", _specifiers);
+	NSLog(@"[Asos] specifiersByID is %@", _specifiersByID);
+
 	return _specifiers;
 }
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
@@ -84,6 +91,31 @@ UIView* sbWindow;
 	}
 }
 @end
+
+void loadPreferences() {
+	NSMutableDictionary* prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
+
+	NSLog(@"[Asos] timeInput is %@", timeInput);
+	NSLog(@"[Asos] spsecifierAtIndex 10 is %@", [controller specifierAtIndex:10]);
+
+	if (![[prefs objectForKey:@"atTime"] boolValue]) {
+		[controller removeSpecifier:timeInput animated:YES];
+	}
+	else {
+		[controller insertSpecifier:timeInput atIndex:10 animated:YES];
+	}
+}
+
+%ctor {
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+									NULL,
+									(CFNotificationCallback)loadPreferences,
+									CFSTR("com.phillipt.asos/settingschanged"),
+									NULL,
+									CFNotificationSuspensionBehaviorDeliverImmediately);
+	
+	loadPreferences();
+}
 
 @interface Applications: PSListController {
 }

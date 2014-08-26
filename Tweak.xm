@@ -1,4 +1,20 @@
 #import "Interfaces.h"
+#import <objc/runtime.h>
+
+@interface NSObject (AssociatedObject)
+@property (nonatomic, strong) id associatedObject;
+@end
+@implementation NSObject (AssociatedObject)
+@dynamic associatedObject;
+
+- (void)setAssociatedObject:(id)object {
+     objc_setAssociatedObject(self, @selector(associatedObject), object, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
+
+- (id)associatedObject {
+    return objc_getAssociatedObject(self, @selector(associatedObject));
+}
+@end
 //typedef void(^passCompletion)(BOOL);
 
 UITextField* passcodeField;
@@ -11,6 +27,7 @@ NSString* dispName = @"";
 NSMutableDictionary* prefs = [[NSMutableDictionary alloc] init];
 NSMutableArray* lockedApps = [[NSMutableArray alloc] init];
 NSMutableArray* oncePerRespring = [[NSMutableArray alloc] init];
+NSMutableArray* timeLockedApps = [[NSMutableArray alloc] init];
 UIView* key = [[UIView alloc] init];
 id menuButtonDownStamp;
 BOOL isFromMulti = NO;
@@ -24,6 +41,8 @@ BOOL enteredCorrectPass;
 BOOL isToMulti;
 BOOL isUnlocking = YES;
 BOOL onceRespring = NO;
+BOOL atTime;
+NSString* timeInterval;
 NSString* settingsPass;
 NSString* appToOpen;
 NSString* currentlyOpening;
@@ -55,6 +74,14 @@ UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 320, 56
 		passcodeView.alpha = 1.0;
 		blurView.alpha = 1.0;
 	}];
+}
+-(void)removeLocked {
+	NSLog(@"[Asos] removeLocked");
+	id removeObject = [timeLockedApps objectAtIndex:0];
+	[lockedApps addObject:removeObject];
+	[timeLockedApps removeObject:removeObject];
+	//[lockedApps addObject:[self associatedObject]];
+	//[timeLockedApps removeObject:[self associatedObject]];
 }
 @end
 
@@ -103,8 +130,17 @@ PassShower* handler = [[PassShower alloc] init];
 			}
 			if ([[self passcode] isEqualToString:passToUse]) {
 				enteredCorrectPass = YES;
-				if (onceRespring) [lockedApps removeObject:currentlyOpening];
-				if (onceRespring) [oncePerRespring addObject:currentlyOpening];
+				if (onceRespring) {
+					[lockedApps removeObject:currentlyOpening]; 
+					[oncePerRespring addObject:currentlyOpening];
+				}
+
+				if (atTime) {
+					[timeLockedApps addObject:currentlyOpening];
+					[lockedApps removeObject:currentlyOpening];
+					NSTimer* lockRemover = [NSTimer scheduledTimerWithTimeInterval:[timeInterval intValue] target:handler selector:@selector(removeLocked) userInfo:nil repeats:NO];
+					[lockRemover setAssociatedObject:currentlyOpening];
+				}
 				//isUnlocking = NO;
 				notify_post("com.phillipt.asos.multitaskEscape");
 				[UIView animateWithDuration:0.4 animations:^{
@@ -194,6 +230,11 @@ void loadPreferences() {
 	if ([prefs objectForKey:@"enabled"] != nil) enabled = [[prefs objectForKey:@"enabled"] boolValue];
 	if ([prefs objectForKey:@"useRealPass"] != nil) useRealPass = [[prefs objectForKey:@"useRealPass"] boolValue];
 	if ([prefs objectForKey:@"onceRespring"] != nil) onceRespring = [[prefs objectForKey:@"onceRespring"] boolValue];
+	if ([prefs objectForKey:@"atTime"] != nil) atTime = [[prefs objectForKey:@"atTime"] boolValue];
+	if ([prefs objectForKey:@"timeInterval"] != nil) {
+		int timeToLock = [[prefs objectForKey:@"timeInterval"] intValue] * 60;
+		timeInterval = [NSString stringWithFormat:@"%i", timeToLock];
+	}
 	settingsPass = [prefs objectForKey:@"passcode"];
 }
 

@@ -45,6 +45,8 @@
 			<string>Passcode: </string>
 			<key>placeholder</key>
 			<string>1234</string>
+			<key>isNumeric</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -70,7 +72,7 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Only requiere a passcode once per respring, per app</string>
+			<string>Only require a passcode once per respring, per app</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -85,6 +87,48 @@
 			<string>onceRespring</string>
 			<key>label</key>
 			<string>Once a Respring</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>Only require a passcode at a time interval, measured in minutes</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.phillipt.asos</string>
+			<key>PostNotification</key>
+			<string>com.phillipt.asos/settingschanged</string>
+			<key>key</key>
+			<string>atTime</string>
+			<key>label</key>
+			<string>Timed Passcode</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>detail</key>
+			<string>PSDetailController</string>
+			<key>defaults</key>
+			<string>com.phillipt.asos</string>
+			<key>PostNotification</key>
+			<string>com.phillipt.asos/settingschanged</string>
+			<key>key</key>
+			<string>timeInterval</string>
+			<key>label</key>
+			<string>Require a passcode every</string>
+			<key>placeholder</key>
+			<string>10 minutes</string>
+			<key>isNumeric</key>
+			<true/>
 		</dict>
 		<dict>
 			<key>cell</key>
