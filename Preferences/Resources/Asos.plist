@@ -7,8 +7,12 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>Asos</string>
+			<key>footerCellClass</key>
+			<string>AsosCustomCell</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -129,10 +133,6 @@
 			<string>10 minutes</string>
 			<key>isNumeric</key>
 			<true/>
-		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
 		</dict>
 		<dict>
 			<key>cell</key>
