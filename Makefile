@@ -9,7 +9,7 @@ Asos_FRAMEWORKS = UIKit CoreGraphics QuartzCore
 Asos_PRIVATE_FRAMEWORKS = SpringBoardServices AppSupport
 Asos_LIBRARIES = applist
 
-#ADDITIONAL_CFLAGS = -I../common
+ADDITIONAL_CFLAGS = -I../common
 
 SUBPROJECTS += Preferences
 
