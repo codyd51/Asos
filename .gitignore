@@ -4,3 +4,4 @@ theos/
 obj/
 _/
 *.deb
+*.xcworkspace
