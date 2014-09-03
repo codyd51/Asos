@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict>
+<dict>	
+	<key>title</key>
+	<string>Asos</string>
 	<key>items</key>
 	<array>
 		<dict>
@@ -10,6 +12,7 @@
 			<key>footerCellClass</key>
 			<string>AsosCustomCell</string>
 		</dict>
+		
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
@@ -28,11 +31,14 @@
 			<key>label</key>
 			<string>Enabled</string>
 		</dict>
+		
+		
+		
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>The passcode used to unlock your locked apps</string>
+			<string>The passcode used to unlock your locked apps.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -46,17 +52,20 @@
 			<key>key</key>
 			<string>passcode</string>
 			<key>label</key>
-			<string>Passcode: </string>
+			<string>Passcode:</string>
 			<key>placeholder</key>
 			<string>1234</string>
 			<key>isNumeric</key>
 			<true/>
 		</dict>
+
+
+
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Use the passcode you use to unlock your phone to also unlock your apps</string>
+			<string>Use your phone's passcode to unlock your locked apps.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -72,11 +81,14 @@
 			<key>label</key>
 			<string>Use Real Passcode</string>
 		</dict>
+
+
+
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Only require a passcode once per respring, per app</string>
+			<string>Only require a passcode once per respring, per app.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -90,17 +102,24 @@
 			<key>key</key>
 			<string>onceRespring</string>
 			<key>label</key>
-			<string>Once a Respring</string>
+			<string>Once-A-Respring</string>
 		</dict>
+
+
+
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Only require a passcode at a time interval, measured in minutes</string>
+			<string>Only require passcode after a time interval, measured in minutes</string>
 		</dict>
+		
+		<!-- Switch: atTime -->
 		<dict>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
+			<key>id</key>
+			<string>atTime</string>
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
@@ -112,11 +131,16 @@
 			<key>label</key>
 			<string>Timed Passcode</string>
 		</dict>
+
+
+		<!-- Text Input: timeInterval -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 		</dict>
 		<dict>
+			<key>id</key>
+			<string>timeInterval</string>
 			<key>cell</key>
 			<string>PSEditTextCell</string>
 			<key>detail</key>
@@ -134,6 +158,7 @@
 			<key>isNumeric</key>
 			<true/>
 		</dict>
+
 		<dict>
 			<key>cell</key>
 			<string>PSLinkCell</string>
@@ -180,7 +205,5 @@
 			<string>/var/mobile/Library/Preferences/com.phillipt.asos.plist</string>
 		</dict>
 	</array>
-	<key>title</key>
-	<string>Asos</string>
 </dict>
 </plist>

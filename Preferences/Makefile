@@ -1,14 +1,22 @@
 ARCHS = armv7 arm64
-include theos/makefiles/common.mk
+TARGET = iphone:clang:latest:7.0
+THEOS_BUILD_DIR = Packages
 
 BUNDLE_NAME = Asos
-Asos_FILES = Asos.xm
+Asos_CFLAGS = -fobjc-arc
+Asos_FILES = Asos.mm
 Asos_INSTALL_PATH = /Library/PreferenceBundles
 Asos_FRAMEWORKS = UIKit CoreGraphics QuartzCore AudioToolbox
 Asos_PRIVATE_FRAMEWORKS = Preferences
-Asos_LIBRARIES=applist
+Asos_LIBRARIES = applist
 
+include theos/makefiles/common.mk
 include $(THEOS_MAKE_PATH)/bundle.mk
+
+
+after-stage::
+	find $(FW_STAGING_DIR) -iname '*.plist' -or -iname '*.strings' -exec plutil -convert binary1 {} \;
+	find $(FW_STAGING_DIR) -iname '*.png' -exec pincrush-osx -i {} \;
 
 internal-stage::
 	$(ECHO_NOTHING)mkdir -p $(THEOS_STAGING_DIR)/Library/PreferenceLoader/Preferences$(ECHO_END)
