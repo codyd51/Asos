@@ -1,4 +1,4 @@
-ARCHS = armv7 arm64
+ARCHS = armv7 armv7s arm64
 TARGET = iphone:clang:latest:7.0
 THEOS_BUILD_DIR = Packages
 
@@ -6,7 +6,7 @@ TWEAK_NAME = Asos
 Asos_CFLAGS = -fobjc-arc
 Asos_FILES = Tweak.xm
 Asos_FRAMEWORKS = UIKit CoreGraphics QuartzCore
-Asos_PRIVATE_FRAMEWORKS = SpringBoardServices AppSupport
+Asos_PRIVATE_FRAMEWORKS = SpringBoardServices SpringBoardUIServices AppSupport
 Asos_LIBRARIES = applist
 
 ADDITIONAL_CFLAGS = -I../common

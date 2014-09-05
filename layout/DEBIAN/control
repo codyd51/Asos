@@ -1,7 +1,7 @@
 Package: com.phillipt.asos
 Name: Asos
 Icon: Asos.png
-Depends: mobilesubstrate
+Depends: mobilesubstrate, firmware (>= 7.0), preferenceloader, applist
 Version: 0.0.1
 Architecture: iphoneos-arm
 Description: Lock out certain apps

@@ -6,7 +6,7 @@
 //#import <QuartzCore/CALayer.h>
 
 
-extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
+extern NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
 
 
 //@protocol SBUIPasscodeLockViewDelegate <NSObject>

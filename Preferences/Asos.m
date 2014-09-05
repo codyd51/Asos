@@ -37,7 +37,7 @@
 // Globals //
 
 #define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
-static AsosListController* controller;
+static AsosListController *controller;
 
 
 
@@ -69,7 +69,6 @@ void loadPreferences() {
 }
 
 
-
 // Settings Controller //
 
 @implementation AsosListController
@@ -98,21 +97,21 @@ void loadPreferences() {
 		_specifiers = [self loadSpecifiersFromPlistName:@"Asos" target:self];
 		DebugLog(@"read specifiers from disk: %@", _specifiers);
 	}
-	
-	self.timeInputSpecifier = [self specifierForID:@"timeInterval"];
-	DebugLog(@"got timeInput specifier: %@", self.timeInputSpecifier);
-	
+//	
+//	self.timeInputSpecifier = [self specifierForID:@"timeInterval"];
+//	DebugLog(@"got timeInput specifier: %@", self.timeInputSpecifier);
+//	
 //	loadPreferences();
-	
-	if (self.prefs && [self.prefs[@"enabled"] boolValue]) {
-		if ((self.prefs[@"passcode"]) || [self.prefs[@"useRealPass"] boolValue]) {
-			[self showAlert];
-		}
-	}
+//	
+//	if (self.prefs && [self.prefs[@"enabled"] boolValue]) {
+//		if ((self.prefs[@"passcode"]) || [self.prefs[@"useRealPass"] boolValue]) {
+//			[self showAlert];
+//		}
+//	}
 	
 	return _specifiers;
 }
-
+/*
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
 	DebugLog(@"alertView button clicked");
 	
@@ -194,7 +193,7 @@ void loadPreferences() {
 	self.blurView = nil;
 	self.sbWindow = nil;
 }
-
+*/
 @end
 
 
@@ -303,5 +302,4 @@ void loadPreferences() {
 }
 
 @end
-
 

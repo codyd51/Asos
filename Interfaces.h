@@ -4,8 +4,12 @@
 #import <UIKit/UIKit.h>
 
 #include <dlfcn.h>
+
 #define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
 extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
+
+
+
 @protocol SBUIPasscodeLockViewDelegate <NSObject>
 @optional
 - (void)passcodeLockViewCancelButtonPressed:(id)pressed;
@@ -39,38 +43,37 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 - (void)handleHomeButtonTap;
 - (void)_giveUpOnMenuDoubleTap;
 @end
-@interface SBUIPasscodeLockViewBase : UIView
-@property(nonatomic) _Bool shouldResetForFailedPasscodeAttempt;
-@property(nonatomic) unsigned long long biometricMatchMode;
-@property(nonatomic, getter=_luminosityBoost, setter=_setLuminosityBoost:) double luminosityBoost;
-@property(retain, nonatomic) id backgroundLegibilitySettingsProvider;
-//@property(nonatomic, getter=_entryField, setter=_setEntryField:) SBUIPasscodeEntryField *_entryField;
-@property(nonatomic, getter=_entryField, setter=_setEntryField:) id _entryField;
-@property(retain, nonatomic) UIColor *customBackgroundColor;
-@property(nonatomic) double backgroundAlpha;
-@property(nonatomic) _Bool showsStatusField;
-@property(nonatomic) _Bool showsEmergencyCallButton;
-@property(nonatomic) NSString *passcode;
-@property(nonatomic) int style;
-@property(nonatomic) id <SBUIPasscodeLockViewDelegate> delegate;
-- (void)reset;
-- (void)resetForFailedPasscode;
-@end
-@interface SBUIPasscodeLockViewWithKeypad : SBUIPasscodeLockViewBase
-@property(retain, nonatomic) UILabel *statusTitleView;
--(id)passcode;
-@end
-@interface SBUIPasscodeLockViewSimple4DigitKeypad : SBUIPasscodeLockViewWithKeypad
-@end
+
+//@interface SBUIPasscodeLockViewBase : UIView
+//@property(nonatomic) _Bool shouldResetForFailedPasscodeAttempt;
+//@property(nonatomic) unsigned long long biometricMatchMode;
+//@property(nonatomic, getter=_luminosityBoost, setter=_setLuminosityBoost:) double luminosityBoost;
+//@property(retain, nonatomic) id backgroundLegibilitySettingsProvider;
+////@property(nonatomic, getter=_entryField, setter=_setEntryField:) SBUIPasscodeEntryField *_entryField;
+//@property(nonatomic, getter=_entryField, setter=_setEntryField:) id _entryField;
+//@property(retain, nonatomic) UIColor *customBackgroundColor;
+//@property(nonatomic) double backgroundAlpha;
+//@property(nonatomic) _Bool showsStatusField;
+//@property(nonatomic) _Bool showsEmergencyCallButton;
+//@property(nonatomic) NSString *passcode;
+//@property(nonatomic) int style;
+//@property(nonatomic) id <SBUIPasscodeLockViewDelegate> delegate;
+//- (void)reset;
+//- (void)resetForFailedPasscode;
+//@end
+//@interface SBUIPasscodeLockViewWithKeypad : SBUIPasscodeLockViewBase
+//@property(retain, nonatomic) UILabel *statusTitleView;
+//-(id)passcode;
+//@end
+//@interface SBUIPasscodeLockViewSimple4DigitKeypad : SBUIPasscodeLockViewWithKeypad
+//@end
+
 @interface _UIBackdropView : UIView
 - (id)initWithFrame:(CGRect)arg1 autosizesToFitSuperview:(BOOL)arg2 settings:(id)arg3;
 - (void)setBlurQuality:(id)arg1;
 @end
 @interface _UIBackdropViewSettings : NSObject
 + (id)settingsForPrivateStyle:(int)arg1;
-@end
-@interface PassShower : NSObject <UIAlertViewDelegate>
--(void)showPassViewWithBundleID:(NSString*)passedID andDisplayName:(NSString*)passedDisplayName toWindow:(UIView*)window;
 @end
 @interface SpringBoard : NSObject
 - (void)_handleMenuButtonEvent;
