@@ -1,10 +1,9 @@
-Package: com.phillipt.asos
+Package: com.cortexdevteam.asos
 Name: Asos
 Icon: Asos.png
 Depends: mobilesubstrate, firmware (>= 7.0), preferenceloader, applist
-Version: 0.0.1
+Version: 1.0.0
 Architecture: iphoneos-arm
 Description: Lock out certain apps
-Maintainer: Phillip Tennen
-Author: Phillip Tennen
+Author: Cortex Dev Team
 Section: Tweaks

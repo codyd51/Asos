@@ -7,7 +7,7 @@ Asos_CFLAGS = -fobjc-arc
 Asos_FILES = Asos.m
 Asos_INSTALL_PATH = /Library/PreferenceBundles
 Asos_FRAMEWORKS = UIKit
-Asos_PRIVATE_FRAMEWORKS = Preferences CoreGraphics AudioToolBox
+Asos_PRIVATE_FRAMEWORKS = Preferences CoreGraphics ManagedConfiguration
 Asos_LIBRARIES = applist
 
 include theos/makefiles/common.mk

@@ -9,13 +9,15 @@
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
-			<key>footerCellClass</key>
+			<key>headerCellClass</key>
 			<string>AsosCustomCell</string>
 		</dict>
 		
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
+			<key>footerText</key>
+			<string>⚠️ Please Respring to enable or disable this tweak.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -23,9 +25,9 @@
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.phillipt.asos</string>
+			<string>com.cortexdevteam.asos</string>
 			<key>PostNotification</key>
-			<string>com.phillipt.asos/settingschanged</string>
+			<string>com.cortexdevteam.asos/settingschanged</string>
 			<key>key</key>
 			<string>enabled</string>
 			<key>label</key>
@@ -46,9 +48,9 @@
 			<key>detail</key>
 			<string>PSDetailController</string>
 			<key>defaults</key>
-			<string>com.phillipt.asos</string>
+			<string>com.cortexdevteam.asos</string>
 			<key>PostNotification</key>
-			<string>com.phillipt.asos/settingschanged</string>
+			<string>com.cortexdevteam.asos/settingschanged</string>
 			<key>key</key>
 			<string>passcode</string>
 			<key>label</key>
@@ -73,9 +75,9 @@
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.phillipt.asos</string>
+			<string>com.cortexdevteam.asos</string>
 			<key>PostNotification</key>
-			<string>com.phillipt.asos/settingschanged</string>
+			<string>com.cortexdevteam.asos/settingschanged</string>
 			<key>key</key>
 			<string>useRealPass</string>
 			<key>label</key>
@@ -96,9 +98,9 @@
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
-			<string>com.phillipt.asos</string>
+			<string>com.cortexdevteam.asos</string>
 			<key>PostNotification</key>
-			<string>com.phillipt.asos/settingschanged</string>
+			<string>com.cortexdevteam.asos/settingschanged</string>
 			<key>key</key>
 			<string>onceRespring</string>
 			<key>label</key>
@@ -123,9 +125,9 @@
 			<key>default</key>
 			<false/>
 			<key>defaults</key>
-			<string>com.phillipt.asos</string>
+			<string>com.cortexdevteam.asos</string>
 			<key>PostNotification</key>
-			<string>com.phillipt.asos/settingschanged</string>
+			<string>com.cortexdevteam.asos/settingschanged</string>
 			<key>key</key>
 			<string>atTime</string>
 			<key>label</key>
@@ -146,9 +148,9 @@
 			<key>detail</key>
 			<string>PSDetailController</string>
 			<key>defaults</key>
-			<string>com.phillipt.asos</string>
+			<string>com.cortexdevteam.asos</string>
 			<key>PostNotification</key>
-			<string>com.phillipt.asos/settingschanged</string>
+			<string>com.cortexdevteam.asos/settingschanged</string>
 			<key>key</key>
 			<string>timeInterval</string>
 			<key>label</key>
@@ -171,7 +173,7 @@
 			<key>ALAllowsSelection</key>
 			<string>1</string>
 			<key>ALChangeNotification</key>
-			<string>com.phillipt.asos/settingschanged</string>
+			<string>com.cortexdevteam.asos/settingschanged</string>
 			<key>ALSectionDescriptors</key>
 			<array>
 				<dict>
@@ -202,7 +204,7 @@
 			<key>ALSettingsKeyPrefix</key>
 			<string>lock-</string>
 			<key>ALSettingsPath</key>
-			<string>/var/mobile/Library/Preferences/com.phillipt.asos.plist</string>
+			<string>/var/mobile/Library/Preferences/com.cortexdevteam.asos.plist</string>
 		</dict>
 	</array>
 </dict>

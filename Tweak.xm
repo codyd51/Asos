@@ -4,6 +4,7 @@
 //
 
 #import <objc/runtime.h>
+#import <AudioToolbox/AudioServices.h>
 #import <SpringBoard/SBDeviceLockController.h>
 #import <SpringBoardUIServices/SBUIPasscodeLockViewSimple4DigitKeypad.h>
 #import "Interfaces.h"
@@ -33,7 +34,7 @@
 // Globals
 //
 
-#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
+#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.cortexdevteam.asos.plist"]
 
 @class ASOSPassShower;
 static ASOSPassShower *handler;
@@ -96,6 +97,74 @@ static BOOL onceRespring;
 
 
 //
+// Helpers
+//
+
+void loadPreferences() {
+	DebugLogC(@"loadPreferences()");
+	
+	[lockedApps removeAllObjects];
+	
+	prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
+	DebugLogC(@"read prefs from disk: %@", prefs);
+	
+	if (prefs) {
+		// populate lockedApps array
+		for (NSString *key in [prefs allKeys]) {
+			if ([[prefs objectForKey:key] boolValue]) {
+				if ([key rangeOfString:@"lock-"].location != NSNotFound) {
+					NSString *trimmedString = [key substringFromIndex:5];
+					[lockedApps addObject:trimmedString];
+				}
+			}
+		}
+		
+		if (prefs[@"enabled"]) {
+			enabled = [prefs[@"enabled"] boolValue];
+		}
+		DebugLogC(@"setting for enabled:%d", enabled);
+		
+		if ([prefs objectForKey:@"useRealPass"]) {
+			useRealPass = [[prefs objectForKey:@"useRealPass"] boolValue];
+		}
+		DebugLogC(@"setting for useRealPass:%d", useRealPass);
+		
+		if ([prefs objectForKey:@"onceRespring"]) {
+			onceRespring = [[prefs objectForKey:@"onceRespring"] boolValue];
+		}
+		DebugLogC(@"setting for onceRespring:%d", onceRespring);
+		
+		if ([prefs objectForKey:@"atTime"]) {
+			atTime = [[prefs objectForKey:@"atTime"] boolValue];
+		}
+		DebugLogC(@"setting for atTime:%d", atTime);
+		
+		if ([prefs objectForKey:@"timeInterval"]) {
+			int timeToLock = [[prefs objectForKey:@"timeInterval"] intValue] * 60;
+			timeInterval = [NSString stringWithFormat:@"%i", timeToLock];
+		}
+		DebugLogC(@"setting for timeInterval:%@", timeInterval);
+		
+		settingsPass = [prefs objectForKey:@"passcode"];
+		DebugLogC(@"setting for settingsPass:%@", settingsPass);
+	}
+}
+
+void dismissToApp() {
+	if (isToMulti) {
+		isUnlocking = NO;
+		[appSlider sliderScroller:scroller itemTapped:indexTapped];
+		isUnlocking = YES;
+		[appSlider animateDismissalToDisplayIdentifier:appToOpen withCompletion:nil];
+		isToMulti = NO;
+	}
+}
+
+
+
+
+
+//
 // PasscodeView Class
 //
 @implementation ASOSPasscodeView
@@ -152,7 +221,7 @@ static BOOL onceRespring;
 			}
 			
 			// close the switcher
-			notify_post("com.phillipt.asos.multitaskEscape");
+			notify_post("com.cortexdevteam.asos.multitaskEscape");
 			
 			// dismiss the passcode view
 			[UIView animateWithDuration:0.4 animations:^{
@@ -234,7 +303,6 @@ static BOOL onceRespring;
 								   autosizesToFitSuperview:YES settings:[_UIBackdropViewSettings settingsForPrivateStyle:3900]];
 		[_blurView setBlurQuality:@"default"];
 		
-//		_passcodeView = [[%c(SBUIPasscodeLockViewSimple4DigitKeypad) alloc] init];
 		_passcodeView = [[ASOSPasscodeView alloc] init];
 	}
 	return self;
@@ -261,64 +329,42 @@ static BOOL onceRespring;
 	[lockedApps addObject:removeObject];
 	[timeLockedApps removeObject:removeObject];
 }
-@end
-
-
-
-
-
-//
-// Helpers
-//
-
-void loadPreferences() {
-	DebugLogC(@"loadPreferences()");
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+	DebugLog(@"clicked button: %d", (int)buttonIndex);
 	
-	[lockedApps removeAllObjects];
-	
-	prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
-	DebugLogC(@"read prefs from disk: %@", prefs);
-	
-	if (prefs) {
-		// populate lockedApps array
-		for (NSString *key in [prefs allKeys]) {
-			if ([[prefs objectForKey:key] boolValue]) {
-				if ([key rangeOfString:@"lock-"].location != NSNotFound) {
-					NSString *trimmedString = [key substringFromIndex:5];
-					[lockedApps addObject:trimmedString];
-				}
-			}
+	if (buttonIndex == alertView.cancelButtonIndex) {
+		[alertView dismissWithClickedButtonIndex:0 animated:YES];
+		alertView = nil;
+		[UIView animateWithDuration:0.4 animations:^{
+			self.blurView.alpha = 1.0;
+		}];
+		notify_post("com.cortexdevteam.asos.settings-pop-vc");
+		
+	} else {
+		DebugLog(@"Checking passcode...");
+		
+		UITextField *loginField = [alertView textFieldAtIndex:0];
+		NSString *code = loginField.text;
+		BOOL codeIsCorrect = NO;
+		
+		if ([[%c(SBDeviceLockController) sharedController] attemptDeviceUnlockWithPassword:code appRequested:nil]) {
+			codeIsCorrect = YES;
 		}
 		
-		if (prefs[@"enabled"]) {
-			enabled = [prefs[@"enabled"] boolValue];
+		if (codeIsCorrect) {
+			[alertView dismissWithClickedButtonIndex:0 animated:YES];
+			alertView = nil;
+			[UIView animateWithDuration:0.4 animations:^{
+				self.blurView.alpha = 1.0;
+			}];
+			
+		} else {
+			// wrong code, much vibration
+			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
 		}
-		if ([prefs objectForKey:@"useRealPass"]) {
-			useRealPass = [[prefs objectForKey:@"useRealPass"] boolValue];
-		}
-		if ([prefs objectForKey:@"onceRespring"]) {
-			onceRespring = [[prefs objectForKey:@"onceRespring"] boolValue];
-		}
-		if ([prefs objectForKey:@"atTime"]) {
-			atTime = [[prefs objectForKey:@"atTime"] boolValue];
-		}
-		if ([prefs objectForKey:@"timeInterval"]) {
-			int timeToLock = [[prefs objectForKey:@"timeInterval"] intValue] * 60;
-			timeInterval = [NSString stringWithFormat:@"%i", timeToLock];
-		}
-		settingsPass = [prefs objectForKey:@"passcode"];
 	}
 }
-
-void dismissToApp() {
-	if (isToMulti) {
-		isUnlocking = NO;
-		[appSlider sliderScroller:scroller itemTapped:indexTapped];
-		isUnlocking = YES;
-		[appSlider animateDismissalToDisplayIdentifier:appToOpen withCompletion:nil];
-		isToMulti = NO;
-	}
-}
+@end
 
 
 
@@ -332,8 +378,8 @@ void dismissToApp() {
 	DebugLog0;
 	%orig;
 	
-	notify_post("com.phillipt.asos/settingschanged");
-	loadPreferences();
+//	notify_post("com.cortexdevteam.asos/settingschanged");
+//	loadPreferences();
 }
 - (void)_menuButtonDown:(id)arg1 {
 	DebugLog0;
@@ -420,7 +466,7 @@ void dismissToApp() {
 				}
 				
 				// close the switcher
-				notify_post("com.phillipt.asos.multitaskEscape");
+				notify_post("com.cortexdevteam.asos.multitaskEscape");
 				
 				// dismiss the passcode view
 				[UIView animateWithDuration:0.4 animations:^{
@@ -641,27 +687,35 @@ void dismissToApp() {
 //
 %ctor {
 	@autoreleasepool {
-		handler = [[ASOSPassShower alloc] init];
-		lockedApps = [[NSMutableArray alloc] init];
-		timeLockedApps = [[NSMutableArray alloc] init];
-		oncePerRespring = [[NSMutableArray alloc] init];
-		openApps = [[NSMutableArray alloc] init];
+		NSLog(@" ASOS init.");
 		
 		loadPreferences();
 		
-		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
-									NULL,
-									(CFNotificationCallback)loadPreferences,
-									CFSTR("com.phillipt.asos/settingschanged"),
-									NULL,
-									CFNotificationSuspensionBehaviorDeliverImmediately);
-		
-		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
-									NULL,
-									(CFNotificationCallback)dismissToApp,
-									CFSTR("com.phillipt.asos.multitaskEscape"),
-									NULL,
-									CFNotificationSuspensionBehaviorDeliverImmediately);
+		if (enabled) {
+			DebugLogC(@"ASOS is enabled");
+			
+			handler = [[ASOSPassShower alloc] init];
+			lockedApps = [[NSMutableArray alloc] init];
+			timeLockedApps = [[NSMutableArray alloc] init];
+			oncePerRespring = [[NSMutableArray alloc] init];
+			openApps = [[NSMutableArray alloc] init];
+			
+			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+											NULL,
+											(CFNotificationCallback)loadPreferences,
+											CFSTR("com.cortexdevteam.asos/settingschanged"),
+											NULL,
+											CFNotificationSuspensionBehaviorDeliverImmediately);
+			
+			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+											NULL,
+											(CFNotificationCallback)dismissToApp,
+											CFSTR("com.cortexdevteam.asos.multitaskEscape"),
+											NULL,
+											CFNotificationSuspensionBehaviorDeliverImmediately);
+		} else {
+			DebugLogC(@"ASOS is disabled");
+		}
 		
 		dismissToApp();
 	}

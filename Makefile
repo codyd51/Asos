@@ -6,7 +6,8 @@ TWEAK_NAME = Asos
 Asos_CFLAGS = -fobjc-arc
 Asos_FILES = Tweak.xm
 Asos_FRAMEWORKS = UIKit CoreGraphics QuartzCore
-Asos_PRIVATE_FRAMEWORKS = SpringBoardServices SpringBoardUIServices AppSupport
+Asos_PRIVATE_FRAMEWORKS = SpringBoardServices SpringBoardUIServices AudioToolBox AppSupport
+
 Asos_LIBRARIES = applist
 
 ADDITIONAL_CFLAGS = -I../common

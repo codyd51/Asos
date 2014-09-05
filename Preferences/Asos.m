@@ -1,176 +1,178 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSTableCell.h>
 #import <Preferences/PSEditableListController.h>
-#import <AudioToolbox/AudioServices.h>
+#import <ManagedConfiguration/MCPasscodeManager.h>
 #import "Interfaces.h"
 
-
-#ifdef DEBUG
-	#define DebugLog(s, ...) NSLog(@" [Asos Prefs] >> %@", [NSString stringWithFormat:(s), ##__VA_ARGS__])
-#else
-	#define DebugLog(s, ...)
-#endif
+#define DEBUG_PREFIX @" [Asos:Prefs]"
+#import "../DebugLog.h"
 
 
-// Interfaces //
-
+//
+// Interfaces
+//
 @interface AsosListController: PSListController <UIAlertViewDelegate>
 @property (nonatomic, strong) NSMutableDictionary* prefs;
 @property (nonatomic, strong) PSSpecifier *timeInputSpecifier;
 @property (nonatomic, strong) UIView* sbWindow;
 @property (nonatomic, strong) _UIBackdropView *blurView;
-@property (nonatomic, strong) UIAlertView* loginAlert;
+@property (nonatomic, strong) UIAlertView* passcodeAlert;
 @property (nonatomic, assign) int randNum;
 @end
 
-
 @interface AsosCustomCell : PSTableCell
-- (NSString*)randomString;
+//- (NSString*)randomString;
 @end
-
 
 @interface Applications : PSListController
 @end
 
 
 
-// Globals //
+//
+// Globals
+//
+#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.cortexdevteam.asos.plist"]
+#define kSettingsIconPath	@"/Library/PreferenceBundles/Asos.bundle/Asos@2x.png"
+#define kSettingsLogoPath	@"/Library/PreferenceBundles/Asos.bundle/Logo@2x.png"
 
-#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
 static AsosListController *controller;
 
 
 
-// Helper Functions //
+//
+// Helpers
+//
 
 void showOrHideTimeInputCell() {
-	DebugLog(@"showOrHideTimeInputCell()");
+	DebugLogC(@"showOrHideTimeInputCell()");
 	
 	if (controller.specifiers) {
 		if (controller && [controller.prefs[@"atTime"] boolValue]) {
-			DebugLog(@"showing the time input specifier...");
+			DebugLogC(@"showing the time input specifier...");
 //			[controller insertSpecifier:controller.timeInputSpecifier afterSpecifierID:@"atTime" animated:YES];
 			[controller insertSpecifier:controller.timeInputSpecifier atIndex:10 animated:YES];
 		} else {
-			DebugLog(@"hiding the time input specifier...");
+			DebugLogC(@"hiding the time input specifier...");
 			[controller removeSpecifier:controller.timeInputSpecifier animated:YES];
 		}
 	}
 }
 
 void loadPreferences() {
-	DebugLog(@"loadPreferences()");
+	DebugLogC(@"loadPreferences()");
 	
 	if (controller) {
 		controller.prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
-		DebugLog(@"loaded prefs from disk: %@", controller.prefs);
+		DebugLogC(@"loaded prefs from disk: %@", controller.prefs);
 	}
 	showOrHideTimeInputCell();
 }
 
 
-// Settings Controller //
 
+//
+// Settings Controller
+//
 @implementation AsosListController
-
 - (id)initForContentSize:(CGSize)size {
-	DebugLog(@"settings init");
+	DebugLog(@"settings init'd.");
 	
 	self = [super initForContentSize:size];
 	if (self) {
 		controller = self;
 		_randNum = 0;
 		
-		// observe notifications
+		// add a Respring button to the navbar
+		UIBarButtonItem *respringButton = [[UIBarButtonItem alloc]
+										   initWithTitle:@"Respring"
+										   style:UIBarButtonItemStyleDone
+										   target:self
+										   action:@selector(showRespringAlert)];
+		
+		respringButton.tintColor = [UIColor colorWithRed:212/255.0 green:86/255.0 blue:217/255.0 alpha:1];
+		
+		[self.navigationItem setRightBarButtonItem:respringButton];
+		
 		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
 										NULL,
 										(CFNotificationCallback)loadPreferences,
-										CFSTR("com.phillipt.asos/settingschanged"),
+										CFSTR("com.cortexdevteam.asos/settingschanged"),
 										NULL,
 										CFNotificationSuspensionBehaviorDeliverImmediately);
+		
+		// load user settings
+		_prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
+		DebugLog(@"read prefs plist, prefs=%@", _prefs);
+		
+		// passcode protect Asos' settings
+		DebugLog(@"Asos is passcode locked.");
+		[self showPasscodeAlert];
 	}
 	return self;
 }
-
 - (id)specifiers {
 	if (_specifiers == nil) {
 		_specifiers = [self loadSpecifiersFromPlistName:@"Asos" target:self];
 		DebugLog(@"read specifiers from disk: %@", _specifiers);
+		
+		self.timeInputSpecifier = [self specifierForID:@"timeInterval"];
+		DebugLog(@"got timeInput specifier: %@", self.timeInputSpecifier);
 	}
-//	
-//	self.timeInputSpecifier = [self specifierForID:@"timeInterval"];
-//	DebugLog(@"got timeInput specifier: %@", self.timeInputSpecifier);
-//	
-//	loadPreferences();
-//	
-//	if (self.prefs && [self.prefs[@"enabled"] boolValue]) {
-//		if ((self.prefs[@"passcode"]) || [self.prefs[@"useRealPass"] boolValue]) {
-//			[self showAlert];
-//		}
-//	}
 	
 	return _specifiers;
 }
-/*
-- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
-	DebugLog(@"alertView button clicked");
+- (void)viewDidLoad {
+	[super viewDidLoad];
+	showOrHideTimeInputCell();
+}
+- (void)showRespringAlert {
+	UIAlertView *alert = [[UIAlertView alloc]
+						  initWithTitle:@"Respring now?"
+						  message:@"Please Respring to enable or disable this tweak."
+						  delegate:self
+						  cancelButtonTitle:@"NO"
+						  otherButtonTitles:@"YES", nil];
+	alert.tag = 996699;
+	[alert show];
+}
+- (void)respring {
+	NSLog(@"Notific8 called for a respring.");
+	system("killall -HUP SpringBoard");
+}
+- (void)setTitle:(id)title {
+	[super setTitle:title];
 	
-	if (buttonIndex == alertView.cancelButtonIndex) {
-		[self.rootController popViewControllerAnimated:YES];
-		
-	} else {
-		self.prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
-		DebugLog(@"prefs is %@", self.prefs);
-		
-		BOOL useRealPass = [[self.prefs objectForKey:@"useRealPass"] boolValue];
-		DebugLog(@"using real passocde: %@", useRealPass?@"YES":@"NO");
-		
-		NSString *passToUse = (useRealPass) ? self.prefs[@"userPass"] : self.prefs[@"passcode"];
-		DebugLog(@"using passocde: %@", passToUse);
-		
-		if (!passToUse) {
-			DebugLog(@"NO PASSCODE FOUND IN SETTINGS, something went wrong.");
-			[self hideAlert]; // probably should do something else here
-			
-		} else {
-			UITextField *loginField = [self.loginAlert textFieldAtIndex:0];
-
-			if ([loginField.text isEqualToString:passToUse]) {
-				// correct code entered
-				[self hideAlert];
-			} else {
-				// wrong code, very vibration
-				[self.rootController popViewControllerAnimated:YES];
-					AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
-			}
-		}
+	UIImage *icon = [[UIImage alloc] initWithContentsOfFile:kSettingsIconPath];
+	if (icon) {
+		UIImageView *iconView = [[UIImageView alloc] initWithImage:icon];
+		self.navigationItem.titleView = iconView;
 	}
 }
-
-- (void)showAlert {
-	DebugLog(@"showAlert()");
+- (void)showPasscodeAlert {
+	DebugLog0;
 	
-	self.sbWindow = [[UIView alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
-	self.sbWindow.backgroundColor = UIColor.clearColor;
-	[self.view addSubview:self.sbWindow];
+	if (!self.blurView) {
+		self.blurView = [[_UIBackdropView alloc] initWithFrame:CGRectZero
+												   autosizesToFitSuperview:YES
+																  settings:[_UIBackdropViewSettings	settingsForPrivateStyle:3900]];
+		[self.blurView setBlurQuality:@"default"];
+		[[[UIApplication sharedApplication] keyWindow] addSubview:self.blurView];
+	}
 	
-	_UIBackdropViewSettings *settings = [_UIBackdropViewSettings settingsForPrivateStyle:3900];
-	self.blurView = [[_UIBackdropView alloc] initWithFrame:CGRectZero autosizesToFitSuperview:YES settings:settings];
-	
-	self.blurView.alpha = 0;
-	self.blurView.userInteractionEnabled = NO;
-	[self.blurView setBlurQuality:@"default"];
-	[self.sbWindow addSubview:self.blurView];
-	
-	self.loginAlert = [[UIAlertView alloc] initWithTitle:@"Asos" message:@"Enter passcode to access Asos settings" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Ok", nil];
-	[self.loginAlert setAlertViewStyle:UIAlertViewStylePlainTextInput];
-	
-	UITextField *loginField = [self.loginAlert textFieldAtIndex:0];
-	[loginField setKeyboardType:UIKeyboardTypeNumberPad];
-	loginField.autocorrectionType = UITextAutocorrectionTypeNo;
-	loginField.enablesReturnKeyAutomatically = YES;
-	[loginField setPlaceholder:@"15"];
-	
+	if (!self.passcodeAlert) {
+		self.passcodeAlert = [[UIAlertView alloc] initWithTitle:@"Asos"
+															 message:@"Enter passcode to access Asos settings"
+															delegate:self
+												   cancelButtonTitle:@"Cancel"
+												   otherButtonTitles:@"Ok", nil];
+		[self.passcodeAlert setAlertViewStyle:UIAlertViewStylePlainTextInput];
+		
+		UITextField *loginField = [self.passcodeAlert textFieldAtIndex:0];
+		[loginField setKeyboardType:UIKeyboardTypeNumberPad];
+		loginField.autocorrectionType = UITextAutocorrectionTypeNo;
+		loginField.enablesReturnKeyAutomatically = YES;
+	}
 	
 	// show blur animation
 	[UIView animateWithDuration:0.4 animations:^{
@@ -178,83 +180,93 @@ void loadPreferences() {
 	}];
 	
 	// show alert
-	[self.loginAlert show];
+	[self.passcodeAlert show];
 }
-
-- (void)hideAlert {
-	DebugLog(@"hideAlert()");
-	[UIView animateWithDuration:0.8 animations:^{
+- (void)hidePasscodeAlert {
+	DebugLog0;
+	
+	[UIView animateWithDuration:0.4 animations:^{
 		self.blurView.alpha = 0;
 	}];
-	
-	[self.blurView removeFromSuperview];
-	[self.sbWindow removeFromSuperview];
-	self.loginAlert = nil;
-	self.blurView = nil;
-	self.sbWindow = nil;
+	[self.passcodeAlert dismissWithClickedButtonIndex:0 animated:YES];
 }
-*/
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+	DebugLog(@"clicked button: %d", (int)buttonIndex);
+	
+	if (alertView.tag == 996699) {
+		// Respring Alert
+		if (buttonIndex == alertView.cancelButtonIndex) {
+			[self respring];
+		}
+	} else {
+		// Passcode Alert
+		if (buttonIndex == alertView.cancelButtonIndex) { // cancel
+			[self hidePasscodeAlert];
+			[self.rootController popViewControllerAnimated:YES];
+			
+		} else {
+			DebugLog(@"Checking passcode...");
+			
+			UITextField *loginField = [alertView textFieldAtIndex:0];
+			NSString *code = loginField.text;
+			BOOL codeIsGood = NO;
+			
+//			NSBundle *bundle = [NSBundle bundleWithPath:@"/System/Library/"];
+//			NSError *err = nil;
+//			if ([bundle loadAndReturnError:&err]) {
+
+			//				Class $SBDeviceLockController = NSClassFromString(@"SBDeviceLockController");
+			//				DebugLog(@"$SBDeviceLockController = %@", $SBDeviceLockController);
+			//				[[$SBDeviceLockController sharedController] attemptDeviceUnlockWithPassword:code appRequested:nil];
+
+			
+			Class $MC = NSClassFromString(@"MCPasscodeManager");
+			DebugLog(@"$MC = %@", $MC);
+			
+			NSError *error;
+			[[$MC sharedManager] unlockDeviceWithPasscode:code outError:&error];
+			
+			DebugLog(@"error = %@", error);
+			if (!error) {
+				DebugLog(@"no error from MC, yippee!");
+				codeIsGood = YES;
+			}
+			
+			if (codeIsGood) {
+				DebugLog(@"passcode accepted");
+				[self hidePasscodeAlert];
+			} else {
+				DebugLog(@"passcode rejected.");
+				[self hidePasscodeAlert];
+				[self.rootController popViewControllerAnimated:YES];
+			}
+		}
+	}
+}
 @end
 
 
 
-// Logo Cell //
-
+//
+// Logo Cell
+//
 @implementation AsosCustomCell
-
-- (id)initWithSpecifier:(PSSpecifier *)specifier {
-	DebugLog(@"custom cell init");
-	
+- (instancetype)initWithSpecifier:(PSSpecifier *)specifier {
 	self = [super initWithStyle:UITableViewCellStyleDefault
-				reuseIdentifier:@"Cell"
+				reuseIdentifier:@"ASOSCell"
 					  specifier:specifier];
 	if (self) {
-		int width = self.bounds.size.width;
-		CGRect frame = CGRectMake(0, -15, width, 60);
-		CGRect botFrame = CGRectMake(0, 20, width, 60);
-		CGRect randFrame = CGRectMake(0, 40, width, 60);
-		
-		// label 1
-		UILabel *label = [[UILabel alloc] initWithFrame:frame];
-		label.numberOfLines = 1;
-		label.font = [UIFont fontWithName:@"HelveticaNeue-UltraLight" size:48];
-		label.text = @"Asos";
-		label.backgroundColor = UIColor.clearColor;
-		label.textColor = UIColor.blackColor;
-		//[_label setShadowColor:[UIColor blackColor]];
-		//[_label setShadowOffset:CGSizeMake(1,1)];
-		label.textAlignment = NSTextAlignmentCenter;
-		
-		// label 2
-		UILabel *underLabel = [[UILabel alloc] initWithFrame:botFrame];
-		underLabel.numberOfLines = 1;
-		underLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
-		underLabel.text = @"Keep your privacy private.";
-		underLabel.backgroundColor = UIColor.clearColor;
-		underLabel.textColor = UIColor.grayColor;
-		underLabel.textAlignment = NSTextAlignmentCenter;
-		
-		// label 3
-		UILabel *randLabel = [[UILabel alloc] initWithFrame:randFrame];
-		randLabel.numberOfLines = 1;
-		randLabel.font = [UIFont fontWithName:@"HelveticaNeue-Light" size:14];
-		randLabel.text = [self randomString];
-		randLabel.backgroundColor = UIColor.clearColor;
-		randLabel.textColor = UIColor.grayColor;
-		randLabel.textAlignment = NSTextAlignmentCenter;
-		
-		[self addSubview:label];
-		[self addSubview:underLabel];
-		[self addSubview:randLabel];
+		UIImage *logo = [[UIImage alloc] initWithContentsOfFile:kSettingsLogoPath];
+		UIImageView *logoView = [[UIImageView alloc] initWithImage:logo];
+		[self.contentView addSubview:logoView];
 	}
 	return self;
 }
-
 - (CGFloat)preferredHeightForWidth:(CGFloat)arg1 {
-	return 90.0f;
+	return 115.0f;
 }
-
-- (NSString*)randomString {
+/*
+- (NSString *)randomString {
 	//randNum = arc4random_uniform(10);
 	NSString *result;
 	int randNum = controller.randNum;
@@ -300,6 +312,6 @@ void loadPreferences() {
 	
 	return result;
 }
-
+*/
 @end
 
