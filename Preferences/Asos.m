@@ -11,6 +11,9 @@
 //
 // Interfaces
 //
+@interface PSListController (Asos)
+-(void)viewDidLoad;
+@end
 @interface AsosListController: PSListController <UIAlertViewDelegate>
 @property (nonatomic, strong) NSMutableDictionary* prefs;
 @property (nonatomic, strong) PSSpecifier *timeInputSpecifier;
@@ -19,9 +22,12 @@
 @property (nonatomic, strong) UIAlertView* passcodeAlert;
 @property (nonatomic, assign) int randNum;
 @end
-
+@interface PSTableCell (Asos)
+-(id)initWithStyle:(NSInteger)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
+@end
 @interface AsosCustomCell : PSTableCell
 //- (NSString*)randomString;
+@property (nonatomic) UIView* contentView;
 @end
 
 @interface Applications : PSListController

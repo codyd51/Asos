@@ -5,9 +5,35 @@
 
 #import <objc/runtime.h>
 #import <AudioToolbox/AudioServices.h>
-#import <SpringBoard/SBDeviceLockController.h>
-#import <SpringBoardUIServices/SBUIPasscodeLockViewSimple4DigitKeypad.h>
 #import "Interfaces.h"
+@interface SBUIPasscodeLockViewBase : UIView
+@property(nonatomic) _Bool shouldResetForFailedPasscodeAttempt;
+@property(nonatomic) unsigned long long biometricMatchMode;
+@property(nonatomic, getter=_luminosityBoost, setter=_setLuminosityBoost:) double luminosityBoost;
+@property(retain, nonatomic) id backgroundLegibilitySettingsProvider;
+//@property(nonatomic, getter=_entryField, setter=_setEntryField:) SBUIPasscodeEntryField *_entryField;
+@property(nonatomic, getter=_entryField, setter=_setEntryField:) id _entryField;
+@property(retain, nonatomic) UIColor *customBackgroundColor;
+@property(nonatomic) double backgroundAlpha;
+@property(nonatomic) _Bool showsStatusField;
+@property(nonatomic) _Bool showsEmergencyCallButton;
+@property(nonatomic) NSString *passcode;
+@property(nonatomic) int style;
+@property(nonatomic) id <SBUIPasscodeLockViewDelegate> delegate;
+- (void)reset;
+- (void)resetForFailedPasscode;
+@end
+@interface SBUIPasscodeLockViewWithKeypad : SBUIPasscodeLockViewBase
+@property(retain, nonatomic) UILabel *statusTitleView;
+-(id)passcode;
+- (void)passcodeLockNumberPadCancelButtonHit:(id)arg1;
+- (void)passcodeLockNumberPadBackspaceButtonHit:(id)arg1;
+@end
+@interface SBUIPasscodeLockViewSimple4DigitKeypad : SBUIPasscodeLockViewWithKeypad
+- (double)_entryFieldBottomYDistanceFromNumberPadTopButton;
+- (id)_newEntryField;
+- (id)init;
+@end
 
 #define DEBUG_PREFIX @" [Asos]"
 #import "DebugLog.h"
@@ -302,6 +328,7 @@ void dismissToApp() {
 		_blurView = [[_UIBackdropView alloc] initWithFrame:CGRectZero
 								   autosizesToFitSuperview:YES settings:[_UIBackdropViewSettings settingsForPrivateStyle:3900]];
 		[_blurView setBlurQuality:@"default"];
+		_blurView.alpha = 0;
 		
 		_passcodeView = [[ASOSPasscodeView alloc] init];
 	}
@@ -378,8 +405,8 @@ void dismissToApp() {
 	DebugLog0;
 	%orig;
 	
-//	notify_post("com.cortexdevteam.asos/settingschanged");
-//	loadPreferences();
+	notify_post("com.cortexdevteam.asos/settingschanged");
+	loadPreferences();
 }
 - (void)_menuButtonDown:(id)arg1 {
 	DebugLog0;
