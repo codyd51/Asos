@@ -11,13 +11,18 @@
 			<string>PSGroupCell</string>
 			<key>headerCellClass</key>
 			<string>AsosCustomCell</string>
+			<key>id</key>
+			<string>header</string>
+			<key>key</key>
+			<string>header</string>
 		</dict>
 		
+		<!-- Enabled Group -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>⚠️ Please Respring to enable or disable this tweak.</string>
+			<string>Respring required to enable/disable. Other settings take effect immediately.</string>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -32,46 +37,24 @@
 			<string>enabled</string>
 			<key>label</key>
 			<string>Enabled</string>
+			<key>set</key>
+			<string>setEnabledSwitch:specifier:</string>
 		</dict>
 		
 		
-		
+		<!-- Passcode Group -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>The passcode used to unlock your locked apps.</string>
+			<string>Use your device's passcode, or create a special passcode just for Asos.</string>
 		</dict>
-		<dict>
-			<key>cell</key>
-			<string>PSEditTextCell</string>
-			<key>detail</key>
-			<string>PSDetailController</string>
-			<key>defaults</key>
-			<string>com.cortexdevteam.asos</string>
-			<key>PostNotification</key>
-			<string>com.cortexdevteam.asos/settingschanged</string>
-			<key>key</key>
-			<string>passcode</string>
-			<key>label</key>
-			<string>Passcode:</string>
-			<key>placeholder</key>
-			<string>1234</string>
-			<key>isNumeric</key>
-			<true/>
-		</dict>
-
-
-
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>footerText</key>
-			<string>Use your phone's passcode to unlock your locked apps.</string>
-		</dict>
+		
 		<dict>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
+			<key>id</key>
+			<string>useRealPass</string>
 			<key>default</key>
 			<true/>
 			<key>defaults</key>
@@ -82,10 +65,34 @@
 			<string>useRealPass</string>
 			<key>label</key>
 			<string>Use Real Passcode</string>
+			<key>set</key>
+			<string>setUseRealPasscodeSwitch:specifier:</string>
 		</dict>
-
-
-
+		
+		<dict>
+			<key>cell</key>
+			<string>PSEditTextCell</string>
+			<key>id</key>
+			<string>passcode</string>
+			<key>detail</key>
+			<string>PSDetailController</string>
+			<key>defaults</key>
+			<string>com.cortexdevteam.asos</string>
+			<key>PostNotification</key>
+			<string>com.cortexdevteam.asos/settingschanged</string>
+			<key>key</key>
+			<string>passcode</string>
+			<key>label</key>
+			<string>Asos Passcode:</string>
+			<key>placeholder</key>
+			<string>1234</string>
+			<key>isNumeric</key>
+			<true/>
+		</dict>
+		
+		
+		
+		<!-- Once-A-Respring Group -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
@@ -109,14 +116,14 @@
 
 
 
+		<!-- Timed Passcode Group -->
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>footerText</key>
-			<string>Only require passcode after a time interval, measured in minutes</string>
+			<string>Only require passcode after a time interval, measured in minutes.</string>
 		</dict>
 		
-		<!-- Switch: atTime -->
 		<dict>
 			<key>cell</key>
 			<string>PSSwitchCell</string>
@@ -132,13 +139,8 @@
 			<string>atTime</string>
 			<key>label</key>
 			<string>Timed Passcode</string>
-		</dict>
-
-
-		<!-- Text Input: timeInterval -->
-		<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
+			<key>set</key>
+			<string>setTimedPasscodeSwitch:specifier:</string>
 		</dict>
 		<dict>
 			<key>id</key>
@@ -161,6 +163,12 @@
 			<true/>
 		</dict>
 
+
+		<!-- App List Group -->
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSLinkCell</string>
@@ -201,6 +209,7 @@
 					<string>User Applications</string>
 				</dict>
 			</array>
+			
 			<key>ALSettingsKeyPrefix</key>
 			<string>lock-</string>
 			<key>ALSettingsPath</key>
