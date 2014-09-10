@@ -42,7 +42,9 @@
 @interface PSTableCell (Asos)
 -(id)initWithStyle:(NSInteger)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
 @end
-
+@interface PSTableCell (Asos)
+-(id)initWithStyle:(NSInteger)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
+@end
 @interface AsosCustomCell : PSTableCell
 //@property (nonatomic) UIView* contentView;
 @end

@@ -1,0 +1,9 @@
+Package: com.cortexdevteam.asos
+Name: Asos
+Icon: Asos.png
+Depends: mobilesubstrate, firmware (>= 7.0), preferenceloader, applist
+Architecture: iphoneos-arm
+Description: Lock out certain apps
+Author: Cortex Dev Team
+Section: Tweaks
+Version: 1.0.0-1
