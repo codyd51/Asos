@@ -81,16 +81,63 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 - (void)animateDismissalToDisplayIdentifier:(id)arg1 withCompletion:(id)arg2;
 - (void)sliderScroller:(id)arg1 itemTapped:(unsigned long long)arg2;
 @end
-@interface SBIconController : NSObject
-+(id)sharedInstance;
--(void)handleHomeButtonTap;
-@end
+//@interface SBIconController : NSObject
+//+(id)sharedInstance;
+//-(void)handleHomeButtonTap;
+//@end
 @interface SBUIController : NSObject
 + (id)sharedInstance;
 - (void)getRidOfAppSwitcher;
 @end
 @interface CAFilter : NSObject
 +(instancetype)filterWithName:(NSString *)name;
+@end
+@interface SBDeviceLockController : NSObject
+{
+    int _lockState;
+    double _lastLockDate;
+    _Bool _isPermanentlyBlocked;
+    _Bool _isBlockedForThermalCondition;
+    double _deviceLockUnblockTime;
+    _Bool _okToSendNotifications;
+    NSString *_lastIncorrectPasscodeAttempt;
+}
+
++ (id)_sharedControllerIfExists;
++ (id)sharedController;
++ (id)_sharedControllerCreateIfNecessary:(_Bool)arg1;
+- (id)description;
+- (void)_uncachePasscodeIfNecessary;
+- (void)_cachePassword:(id)arg1;
+- (_Bool)shouldAllowUnlockToApplication:(id)arg1;
+- (void)_removeDeviceLockDisableAssertion:(id)arg1;
+- (void)_addDeviceLockDisableAssertion:(id)arg1;
+- (_Bool)attemptDeviceUnlockWithPassword:(id)arg1 appRequested:(_Bool)arg2;
+- (void)_notifyOfFirstUnlock;
+- (void)_setLockState:(int)arg1;
+- (void)_enablePasscodeLockImmediately:(_Bool)arg1;
+- (void)enablePasscodeLockImmediately;
+- (void)_updateDeviceLockedState;
+- (_Bool)_shouldLockDeviceNow;
+- (_Bool)isPasscodeLockedOrBlocked;
+- (_Bool)isPasscodeLocked;
+- (_Bool)isPasscodeLockedCached;
+- (_Bool)deviceHasPasscodeSet;
+- (void)_setDeviceLockUnblockTime:(double)arg1;
+- (void)_unblockTimerFired;
+- (void)_scheduleUnblockTimer;
+- (void)_clearUnblockTimer;
+- (void)_clearBlockedState;
+- (_Bool)isPermanentlyBlocked:(double *)arg1;
+- (_Bool)isBlocked;
+- (_Bool)_temporarilyBlocked;
+- (void)setBlockedForThermalCondition:(_Bool)arg1;
+- (void)_sendBlockStateChangeNotification;
+- (_Bool)isBlockedForThermalCondition;
+- (id)lastLockDate;
+- (void)dealloc;
+- (id)init;
+
 @end
 @interface SwitcherTrayView
 + (id)sharedInstance;
