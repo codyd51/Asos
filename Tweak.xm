@@ -1,11 +1,17 @@
 //
-//  ASOS
+//	Asos
+//
+//	(c) 2014 Phillip Tennen.
 //
 //
 
 #import <objc/runtime.h>
 #import <AudioToolbox/AudioServices.h>
 #import <SpringBoard/SBDeviceLockController.h>
+#import <SpringBoard/SBIconController.h>
+#import <SpringBoard/SBIconViewMap.h>
+#import <SpringBoard/SBIconModel.h>
+#import <SpringBoard/SBIconView.h>
 #import <SpringBoardUIServices/SBUIPasscodeLockViewSimple4DigitKeypad.h>
 #import "Interfaces.h"
 
@@ -30,14 +36,17 @@
 
 
 
-//
 // Globals
-//
 
-#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.cortexdevteam.asos.plist"]
+#define kSettingsPath	[NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.cortexdevteam.asos.plist"]
+#define kUIBackdropViewSettingsDark				1
+#define kUIBackdropViewSettingsColorSample		2000
+#define kUIBackdropViewSettingsPasscodePaddle	3900
+#define kUIBackdropViewSettingsUltraColored		2080
+#define kUIBackdropViewSettingsDarkWithZoom		2031
 
-@class ASOSPassShower;
-static ASOSPassShower *handler;
+@class AsosPassShower;
+static AsosPassShower *handler;
 
 static NSMutableDictionary* prefs;
 static NSMutableArray* lockedApps;
@@ -48,109 +57,159 @@ static NSMutableArray* openApps;
 static id appSlider;
 static id menuButtonDownStamp;
 static id scroller;
-static UITextField* passcodeField;
-//static UIView* key = [[UIView alloc] init];
-//static UIWindow *aboveWindow = [[UIWindow alloc] initWithFrame:CGRectMake(0, 0, 320, 568)];
 
 static NSString* appToOpen;
 static NSString* bundleID;
 static NSString *currentlyOpening;
 static NSString* dispName ;
 static NSString* settingsPass;
-static NSString* tempString;
 static NSString* timeInterval;
 static NSString* userPass;
 
 static BOOL isFromMulti;
 static BOOL isToMulti;
-static BOOL isUnlocking = YES;
+static BOOL isUnlocking;
 static BOOL shouldLaunch;
 static int indexTapped;
 
-
-// Default Settings
-static BOOL enabled = YES;
-static BOOL useRealPass = YES;
+static BOOL enabled;
+static BOOL useRealPass;
 static BOOL atTime;
 static BOOL onceRespring;
 
 
 
+// Interfaces ------------------------------------------------------------------
 
-
-//
-// Interfaces
-//
-
-@interface ASOSPasscodeView : SBUIPasscodeLockViewSimple4DigitKeypad
+@interface AsosPasscodeView : SBUIPasscodeLockViewSimple4DigitKeypad
 @end
 
-
-@interface ASOSPassShower : NSObject <UIAlertViewDelegate>
-@property (nonatomic, strong) ASOSPasscodeView *passcodeView;
+@interface AsosPassShower : NSObject <UIAlertViewDelegate>
+@property (nonatomic, strong) AsosPasscodeView *passcodeView;
 @property (nonatomic, strong) _UIBackdropView *blurView;
-- (void)showPassViewWithBundleID:(NSString *)passedID andDisplayName:(NSString *)passedDisplayName;
+- (void)showPasscodeViewWithBundleID:(NSString *)passedID andDisplayName:(NSString *)passedDisplayName;
 @end
 
 
 
+// Helpers ---------------------------------------------------------------------
 
+void shadeIcon(SBApplicationIcon *icon) {
+	SBIconView *iconView = [[%c(SBIconViewMap) homescreenMap] iconViewForIcon:icon];
+	DebugLogC(@"> iconView is %@", iconView);
+	
+	// create shade ...
+	
+	_UIBackdropView *shade = [[_UIBackdropView alloc] initWithFrame:CGRectZero
+											autosizesToFitSuperview:NO
+														   settings:[_UIBackdropViewSettings settingsForPrivateStyle:kUIBackdropViewSettingsColorSample]];
+	
+	[shade setBlurQuality:@"default"];
+	
+	CGRect frame = iconView.bounds;
+	//					frame.size.width -= 8;
+	//					frame.size.height -= 8;
+	//					frame.origin.x += 4;
+	//					frame.origin.y += 4;
+	shade.frame = frame;
+	
+	[iconView addSubview:shade];
 
-//
-// Helpers
-//
+}
 
-void loadPreferences() {
-	DebugLogC(@"loadPreferences()");
+void darkenApps(NSArray *apps) {
+	DebugLogC(@"Tweak::darkenApps()");
 	
-	[lockedApps removeAllObjects];
-	
-	prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath];
-	DebugLogC(@"read prefs from disk: %@", prefs);
-	
-	if (prefs) {
-		// populate lockedApps array
-		for (NSString *key in [prefs allKeys]) {
-			if ([[prefs objectForKey:key] boolValue]) {
-				if ([key rangeOfString:@"lock-"].location != NSNotFound) {
-					NSString *trimmedString = [key substringFromIndex:5];
-					[lockedApps addObject:trimmedString];
+	if (apps.count > 0) {
+		
+		SBIconController *ic = [%c(SBIconController) sharedInstance];
+		if (ic) {
+			SBIconModel *model = [ic model];
+			if (model) {
+				DebugLogC(@"got model: %@", model);
+				
+				for (NSString *displayId in apps) {
+					DebugLogC(@"darkening app: %@", displayId);
+					
+					SBApplicationIcon *icon = [model applicationIconForDisplayIdentifier:displayId];
+					DebugLogC(@"> got icon: %@)", icon);
+					shadeIcon(icon);
 				}
 			}
 		}
-		
-		if (prefs[@"enabled"]) {
-			enabled = [prefs[@"enabled"] boolValue];
-		}
-		DebugLogC(@"setting for enabled:%d", enabled);
-		
-		if ([prefs objectForKey:@"useRealPass"]) {
-			useRealPass = [[prefs objectForKey:@"useRealPass"] boolValue];
-		}
-		DebugLogC(@"setting for useRealPass:%d", useRealPass);
-		
-		if ([prefs objectForKey:@"onceRespring"]) {
-			onceRespring = [[prefs objectForKey:@"onceRespring"] boolValue];
-		}
-		DebugLogC(@"setting for onceRespring:%d", onceRespring);
-		
-		if ([prefs objectForKey:@"atTime"]) {
-			atTime = [[prefs objectForKey:@"atTime"] boolValue];
-		}
-		DebugLogC(@"setting for atTime:%d", atTime);
-		
-		if ([prefs objectForKey:@"timeInterval"]) {
-			int timeToLock = [[prefs objectForKey:@"timeInterval"] intValue] * 60;
-			timeInterval = [NSString stringWithFormat:@"%i", timeToLock];
-		}
-		DebugLogC(@"setting for timeInterval:%@", timeInterval);
-		
-		settingsPass = [prefs objectForKey:@"passcode"];
-		DebugLogC(@"setting for settingsPass:%@", settingsPass);
 	}
 }
 
+void loadPreferences() {
+	DebugLogC(@"Tweak::loadPreferences()");
+	
+	[lockedApps removeAllObjects];
+	
+	prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath] ?: [NSMutableDictionary dictionary];
+	DebugLogC(@"read prefs from disk: %@", prefs);
+	
+	if (prefs[@"enabled"] && ![prefs[@"enabled"] boolValue]) {
+		enabled = NO;
+	} else {
+		enabled = YES;
+	}
+	DebugLogC(@"setting for enabled:%d", enabled);
+	
+	
+	if ([prefs objectForKey:@"useRealPass"]) {
+		useRealPass = [[prefs objectForKey:@"useRealPass"] boolValue];
+	} else {
+		useRealPass = YES;
+	}
+	DebugLogC(@"setting for useRealPass:%d", useRealPass);
+	
+	
+	if ([prefs objectForKey:@"onceRespring"]) {
+		onceRespring = [[prefs objectForKey:@"onceRespring"] boolValue];
+	} else {
+		onceRespring = YES;
+	}
+	DebugLogC(@"setting for onceRespring:%d", onceRespring);
+	
+	
+	if ([prefs objectForKey:@"atTime"]) {
+		atTime = [[prefs objectForKey:@"atTime"] boolValue];
+	} else {
+		atTime = NO;
+	}
+	DebugLogC(@"setting for atTime:%d", atTime);
+	
+	
+	if ([prefs objectForKey:@"timeInterval"]) {
+		int timeToLock = [[prefs objectForKey:@"timeInterval"] intValue] * 60;
+		timeInterval = [NSString stringWithFormat:@"%i", timeToLock];
+	}
+	DebugLogC(@"setting for timeInterval:%@", timeInterval);
+	
+	
+	if ([prefs objectForKey:@"passcode"]) {
+		settingsPass = [prefs objectForKey:@"passcode"];
+		DebugLogC(@"setting for settingsPass:%@", settingsPass);
+	}
+	
+	
+	// populate lockedApps array
+	for (NSString *key in [prefs allKeys]) {
+		if ([[prefs objectForKey:key] boolValue]) {
+			if ([key rangeOfString:@"lock-"].location != NSNotFound) {
+				NSString *trimmedString = [key substringFromIndex:5];
+				[lockedApps addObject:trimmedString];
+			}
+		}
+	}
+	
+	// darken locked apps
+	darkenApps(lockedApps);
+}
+
 void dismissToApp() {
+	DebugLogC(@"Tweak::dissmissToApp()");
+	
 	if (isToMulti) {
 		isUnlocking = NO;
 		[appSlider sliderScroller:scroller itemTapped:indexTapped];
@@ -162,12 +221,11 @@ void dismissToApp() {
 
 
 
+// Classes ----------------------------------------------------------------------
 
 
-//
 // PasscodeView Class
-//
-@implementation ASOSPasscodeView
+@implementation AsosPasscodeView
 - (instancetype)init {
 	self = [super init];
 	if (self) {
@@ -287,32 +345,46 @@ void dismissToApp() {
 @end
 
 
-
-
-
-//
 // PassShower Class
-//
-@implementation ASOSPassShower
+@implementation AsosPassShower
 - (instancetype)init {
 	DebugLog0;
 	
 	self = [super init];
-	if (self ) {
+	if (self) {
+		// make blue view ...
+		
 		_blurView = [[_UIBackdropView alloc] initWithFrame:CGRectZero
 								   autosizesToFitSuperview:YES settings:[_UIBackdropViewSettings settingsForPrivateStyle:3900]];
 		[_blurView setBlurQuality:@"default"];
+		_blurView.alpha = 0;
+		DebugLog(@"self.blurView = %@", _blurView);
 		
-		_passcodeView = [[ASOSPasscodeView alloc] init];
+		
+		// make passcode view ...
+		_passcodeView = [[AsosPasscodeView alloc] init];
+		DebugLog(@"self.passcodeView = %@", _passcodeView);
+		
+		
+		// listen for notifs from preferences
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+										NULL,
+										(CFNotificationCallback)loadPreferences,
+										CFSTR("com.cortexdevteam.asos/settingschanged"),
+										NULL,
+										CFNotificationSuspensionBehaviorDeliverImmediately);
 	}
 	return self;
 }
-- (void)showPassViewWithBundleID:(NSString *)passedID andDisplayName:(NSString *)passedDisplayName {
+- (void)showPasscodeViewWithBundleID:(NSString *)passedID andDisplayName:(NSString *)passedDisplayName {
 	DebugLog(@"showPassView for: %@ [%@]", passedDisplayName, passedID);
 	
 	currentlyOpening = passedID;
 	[self.passcodeView reset];
 	self.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter Passcode to open %@", passedDisplayName];
+
+	self.blurView.alpha = 0;
+	self.passcodeView.alpha = 0;
 	
 	UIWindow *window = [[UIApplication sharedApplication] keyWindow];
 	[window addSubview:self.blurView];
@@ -322,6 +394,17 @@ void dismissToApp() {
 		self.passcodeView.alpha = 1.0;
 		self.blurView.alpha = 1.0;
 	}];
+}
+- (void)removePasscodeView {
+	DebugLog0;
+	
+	[UIView animateWithDuration:0.4 animations:^{
+		self.passcodeView.alpha = 0;
+		self.blurView.alpha = 0;
+	}];
+	
+	[self.passcodeView removeFromSuperview];
+	[self.blurView removeFromSuperview];
 }
 - (void)removeLocked {
 	DebugLog0;
@@ -333,13 +416,9 @@ void dismissToApp() {
 	DebugLog(@"clicked button: %d", (int)buttonIndex);
 	
 	if (buttonIndex == alertView.cancelButtonIndex) {
+		// user bailed
 		[alertView dismissWithClickedButtonIndex:0 animated:YES];
-		alertView = nil;
-		[UIView animateWithDuration:0.4 animations:^{
-			self.blurView.alpha = 1.0;
-		}];
-		notify_post("com.cortexdevteam.asos.settings-pop-vc");
-		
+		[self removePasscodeView];
 	} else {
 		DebugLog(@"Checking passcode...");
 		
@@ -354,10 +433,7 @@ void dismissToApp() {
 		if (codeIsCorrect) {
 			[alertView dismissWithClickedButtonIndex:0 animated:YES];
 			alertView = nil;
-			[UIView animateWithDuration:0.4 animations:^{
-				self.blurView.alpha = 1.0;
-			}];
-			
+			[self removePasscodeView];
 		} else {
 			// wrong code, much vibration
 			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
@@ -368,9 +444,7 @@ void dismissToApp() {
 
 
 
-
-
-// H00KS ///////////////////////////////////////////////////////////////////////
+// H00KS -----------------------------------------------------------------------
 
 
 %hook SpringBoard
@@ -378,8 +452,7 @@ void dismissToApp() {
 	DebugLog0;
 	%orig;
 	
-//	notify_post("com.cortexdevteam.asos/settingschanged");
-//	loadPreferences();
+	loadPreferences();
 }
 - (void)_menuButtonDown:(id)arg1 {
 	DebugLog0;
@@ -389,36 +462,10 @@ void dismissToApp() {
 %end
 
 
-
-//
-// Save the user's passcode when they use the actual LockScreen.
-//
 /*
-%hook SBLockScreenManager
-- (BOOL)attemptUnlockWithPasscode:(id)arg1 {
-	DebugLog(@"attemptUnlockWithPasscode:%@", arg1);
-	
-	BOOL didSucceed = %orig;
-	if (didSucceed) {
-		userPass = (NSString*)arg1;
-		
-		if (!prefs) {
-			prefs = [[NSMutableDictionary alloc] init];
-		}
-		
-		prefs[@"userPass"] = userPass;
-		DebugLog(@"writing prefs: %@", prefs);
-		[prefs writeToFile:kSettingsPath atomically:YES];
-	}
-	return didSucceed;
-}
-%end
-*/
-
 //
 // Unlock a locked app...
 //
-/*
 %hook SBUIPasscodeLockViewWithKeypad
 - (void)passcodeEntryFieldTextDidChange:(id)arg1 {
 	DebugLog(@"SBUIPasscodeLockViewWithKeypad::passcodeEntryFieldTextDidChange");
@@ -532,10 +579,12 @@ void dismissToApp() {
 */
 
 
-
-// App Launching Hooks ---------------------------------------------------------
-
 %hook SBApplicationIcon
+- (id)initWithApplication:(id)arg1 {
+	self = %orig;
+	shadeIcon(self);
+	return self;
+}
 - (void)launchFromLocation:(int)location {
 	DebugLog0;
 	
@@ -549,7 +598,7 @@ void dismissToApp() {
 	if ([lockedApps containsObject:bundleID] && ![oncePerRespring containsObject:bundleID]) {
 		if (!shouldLaunch) {
 			DebugLog(@"showing pass view...");
-			[handler showPassViewWithBundleID:bundleID andDisplayName:dispName];
+			[handler showPasscodeViewWithBundleID:bundleID andDisplayName:dispName];
 		}
 		else {
 			%orig;
@@ -585,7 +634,7 @@ void dismissToApp() {
 		if ([lockedApps containsObject:appToOpen]) {
 			NSString* appDisplayName = SBSCopyLocalizedApplicationNameForDisplayIdentifier(appToOpen);
 			//SBApplication* appWithDisplay = [[SBApplication alloc] initWithBundleIdentifier:appToOpen];
-			[handler showPassViewWithBundleID:appToOpen andDisplayName:appDisplayName];
+			[handler showPasscodeViewWithBundleID:appToOpen andDisplayName:appDisplayName];
 			/*
 			[appSlider animateDismissalToDisplayIdentifier:@"com.apple.springboard" withCompletion:^{
 			[[%c(SBUIController) sharedInstance] getRidOfAppSwitcher];
@@ -634,9 +683,7 @@ void dismissToApp() {
 %end
 
 
-
-// Stratos Compatibility -------------------------------------------------------
-
+// Stratos Compatibility ------------------------------------>>>
 %hook SBUIController
 - (void)activateApplicationAnimated:(id)application {
 	SBApplication* app = application;
@@ -647,7 +694,7 @@ void dismissToApp() {
 		[[%c(SwitcherTrayView) sharedInstance] closeTray];
 		
 		if (!shouldLaunch) {
-			[handler showPassViewWithBundleID:bundleID andDisplayName:dispName];
+			[handler showPasscodeViewWithBundleID:bundleID andDisplayName:dispName];
 		} else {
 			%orig;
 			shouldLaunch = NO;
@@ -675,16 +722,12 @@ void dismissToApp() {
 
 }
 %end
-
-//End Stratos Compatibility ----------------------------------------------------
-
+//End Stratos Compatibility ---------------------------------<<<
 
 
 
+// Init ------------------------------------------------------------------------
 
-//
-// Init
-//
 %ctor {
 	@autoreleasepool {
 		NSLog(@" ASOS init.");
@@ -694,7 +737,7 @@ void dismissToApp() {
 		if (enabled) {
 			DebugLogC(@"ASOS is enabled");
 			
-			handler = [[ASOSPassShower alloc] init];
+			handler = [[AsosPassShower alloc] init];
 			lockedApps = [[NSMutableArray alloc] init];
 			timeLockedApps = [[NSMutableArray alloc] init];
 			oncePerRespring = [[NSMutableArray alloc] init];
