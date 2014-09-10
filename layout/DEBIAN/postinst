@@ -1,0 +1,5 @@
+#! /bin/sh
+#echo "## Deleting old prefs..."
+#rm -f /private/var/mobile/Library/Preferences/com.cortexdevteam.asos.plist
+#echo "## Done"
+echo "doing nothing"
