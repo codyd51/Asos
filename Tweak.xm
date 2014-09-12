@@ -7,6 +7,7 @@
 
 #import <objc/runtime.h>
 #import <AudioToolbox/AudioServices.h>
+#import <SpringBoard/SBApplicationIcon.h>
 #import <SpringBoard/SBDeviceLockController.h>
 #import <SpringBoard/SBIconController.h>
 #import <SpringBoard/SBIconViewMap.h>
@@ -90,55 +91,13 @@ static BOOL onceRespring;
 - (void)showPasscodeViewWithBundleID:(NSString *)passedID andDisplayName:(NSString *)passedDisplayName;
 @end
 
+@interface SBApplicationIcon ()
+- (void)shade;
+@end
+
 
 
 // Helpers ---------------------------------------------------------------------
-
-void shadeIcon(SBApplicationIcon *icon) {
-	SBIconView *iconView = [[%c(SBIconViewMap) homescreenMap] iconViewForIcon:icon];
-	DebugLogC(@"> iconView is %@", iconView);
-	
-	// create shade ...
-	
-	_UIBackdropView *shade = [[_UIBackdropView alloc] initWithFrame:CGRectZero
-											autosizesToFitSuperview:NO
-														   settings:[_UIBackdropViewSettings settingsForPrivateStyle:kUIBackdropViewSettingsColorSample]];
-	
-	[shade setBlurQuality:@"default"];
-	
-	CGRect frame = iconView.bounds;
-	//					frame.size.width -= 8;
-	//					frame.size.height -= 8;
-	//					frame.origin.x += 4;
-	//					frame.origin.y += 4;
-	shade.frame = frame;
-	
-	[iconView addSubview:shade];
-
-}
-
-void darkenApps(NSArray *apps) {
-	DebugLogC(@"Tweak::darkenApps()");
-	
-	if (apps.count > 0) {
-		
-		SBIconController *ic = [%c(SBIconController) sharedInstance];
-		if (ic) {
-			SBIconModel *model = [ic model];
-			if (model) {
-				DebugLogC(@"got model: %@", model);
-				
-				for (NSString *displayId in apps) {
-					DebugLogC(@"darkening app: %@", displayId);
-					
-					SBApplicationIcon *icon = [model applicationIconForDisplayIdentifier:displayId];
-					DebugLogC(@"> got icon: %@)", icon);
-					shadeIcon(icon);
-				}
-			}
-		}
-	}
-}
 
 void loadPreferences() {
 	DebugLogC(@"Tweak::loadPreferences()");
@@ -202,9 +161,6 @@ void loadPreferences() {
 			}
 		}
 	}
-	
-	// darken locked apps
-	darkenApps(lockedApps);
 }
 
 void dismissToApp() {
@@ -462,127 +418,10 @@ void dismissToApp() {
 %end
 
 
-/*
-//
-// Unlock a locked app...
-//
-%hook SBUIPasscodeLockViewWithKeypad
-- (void)passcodeEntryFieldTextDidChange:(id)arg1 {
-	DebugLog(@"SBUIPasscodeLockViewWithKeypad::passcodeEntryFieldTextDidChange");
-	
-	// Only touch our passcode view
-	if (self == handler.passcodeView) {
-		
-		// check pass after the 4th key press...
-		if ([[self passcode] length] == 4) {
-			
-			enteredCorrectPass = NO;
-			
-			if (!useRealPass) {
-				if (!settingsPass) {
-					// no passcode set for Asos, show alert
-					UIAlertView* noPassAlert = [[UIAlertView alloc] initWithTitle:@"Asos" message:@"Please configure your passcode settings in Asos preferences." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil];
-					[noPassAlert show];
-				} else {
-					// test custom passcode
-					if ([[self passcode] isEqualToString:settingsPass]) {
-						enteredCorrectPass = YES;
-					}
-				}
-				
-			} else {
-				// test real pass
-				if ([[%c(SBDeviceLockController) sharedController] attemptDeviceUnlockWithPassword:[self passcode] appRequested:nil]) {
-					enteredCorrectPass = YES;
-				}
-			}
-			
-			// was the passcode valid for Asos?
-			if (enteredCorrectPass) {
-				
-				if (onceRespring) {
-					[lockedApps removeObject:currentlyOpening]; 
-					[oncePerRespring addObject:currentlyOpening];
-				}
-				
-				if (atTime) {
-					[timeLockedApps addObject:currentlyOpening];
-					[lockedApps removeObject:currentlyOpening];
-					NSTimer* lockRemover = [NSTimer scheduledTimerWithTimeInterval:[timeInterval intValue] target:handler selector:@selector(removeLocked) userInfo:nil repeats:NO];
-					[lockRemover setAssociatedObject:currentlyOpening];
-				}
-				
-				// close the switcher
-				notify_post("com.cortexdevteam.asos.multitaskEscape");
-				
-				// dismiss the passcode view
-				[UIView animateWithDuration:0.4 animations:^{
-					handler.passcodeView.statusTitleView.text = @"✓";
-					handler.passcodeView.alpha = 0;
-					handler.blurView.alpha = 0;
-					//[passcodeView removeFromSuperview];
-				}];
-				[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
-				
-			} else {
-				// To fix the last bubble not dissapearing
-				if (!isFromMulti) {
-					[NSTimer scheduledTimerWithTimeInterval:0.3 target:self selector:@selector(resetFailedPass) userInfo:nil repeats:NO];
-				} else {
-					UIAlertView* homeAlert = [[UIAlertView alloc] initWithTitle:@"Testing" message:@"Should exit to homescreen now." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil];
-					[homeAlert show];
-					SpringBoard* spring = (SpringBoard*)[UIApplication sharedApplication];
-					[spring _handleMenuButtonEvent];
-					[self resetForFailedPasscode];
-					isFromMulti = NO;
-				}
-			}
-		}
-	}
-	
-	%orig;
-}
-- (void)passcodeLockNumberPadCancelButtonHit:(id)arg1 {
-	DebugLog(@"SBUIPasscodeLockViewWithKeypad::passcodeLockNumberPadCancelButtonHit");
-	
-	if ([self tag] == 1337) {
-		[UIView animateWithDuration:0.3 animations:^{
-			handler.passcodeView.alpha = 0;
-			handler.blurView.alpha = 0;
-		}];
-	}
-	%orig;
-}
-- (void)passcodeLockNumberPadBackspaceButtonHit:(id)arg1 {
-	DebugLog(@"SBUIPasscodeLockViewWithKeypad::passcodeLockNumberPadBackspaceButtonHit");
-	
-	//To fix the last number still being filled
-	if ([self tag] == 1337) {
-		if ([[self passcode] length] == 0) [self reset];
-	}
-	%orig;
-}
-%new
-- (void)resetFailedPass {
-	DebugLog(@"SBUIPasscodeLockViewWithKeypad::resetFailedPass");
-	
-	[UIView animateWithDuration:0.5 animations:^{
-		handler.passcodeView.statusTitleView.text = @"✗";
-	}];
-	[UIView animateWithDuration:0.5 animations:^{
-		handler.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter Passcode to open %@", dispName];
-	}];
-	
-	[self resetForFailedPasscode];
-}
-%end
-*/
-
 
 %hook SBApplicationIcon
 - (id)initWithApplication:(id)arg1 {
 	self = %orig;
-	shadeIcon(self);
 	return self;
 }
 - (void)launchFromLocation:(int)location {
@@ -611,6 +450,42 @@ void dismissToApp() {
 		shouldLaunch = NO;
 		[handler.passcodeView reset];
 	}
+}
+
+- (id)generateIconImage:(int)arg1 {
+	DebugLog0;
+	
+	id image = %orig;
+	
+	if (lockedApps && [lockedApps containsObject:[self applicationBundleID]]) {
+		[self shade];
+	} else {
+		DebugLog(@"no locked apps.");
+	}
+	
+	return image;
+}
+
+%new
+- (void)shade {
+	DebugLog(@"shade()");
+	
+	SBIconView *iconView = [[%c(SBIconViewMap) homescreenMap] iconViewForIcon:self];
+	DebugLog(@"> my iconView is %@", iconView);
+	
+	//int blurStyle = kUIBackdropViewSettingsPasscodePaddle;
+	int blurStyle = kUIBackdropViewSettingsDark;
+	
+	_UIBackdropView *shade = [[_UIBackdropView alloc] initWithFrame:CGRectZero
+											autosizesToFitSuperview:NO
+														   settings:[_UIBackdropViewSettings settingsForPrivateStyle:blurStyle]];
+	[shade setBlurQuality:@"default"];
+	
+	CGRect frame = iconView.frame;
+	shade.frame = frame;
+	
+	DebugLog(@"> created shade: %@", shade);
+	[iconView addSubview:shade];
 }
 %end
 
@@ -738,10 +613,11 @@ void dismissToApp() {
 			DebugLogC(@"ASOS is enabled");
 			
 			handler = [[AsosPassShower alloc] init];
-			lockedApps = [[NSMutableArray alloc] init];
 			timeLockedApps = [[NSMutableArray alloc] init];
 			oncePerRespring = [[NSMutableArray alloc] init];
 			openApps = [[NSMutableArray alloc] init];
+			
+			lockedApps = [[NSMutableArray alloc] init];
 			
 			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
 											NULL,

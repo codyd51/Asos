@@ -22,15 +22,15 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 - (id)initWithBundleIdentifier:(id)arg1 webClip:(id)arg2 path:(id)arg3 bundle:(id)arg4 infoDictionary:(id)arg5 isSystemApplication:(_Bool)arg6 signerIdentity:(id)arg7 provisioningProfileValidated:(_Bool)arg8 entitlements:(id)arg9;
 - (id)displayName;
 @end
-@interface SBIcon : NSObject
-- (void)launchFromLocation:(int)location;
-- (id)displayName;
-@end
-@interface SBApplicationIcon : NSObject
-- (void)launchFromLocation:(int)location;
-- (id)displayName;
-- (id)application;
-@end
+//@interface SBIcon : NSObject
+//- (void)launchFromLocation:(int)location;
+//- (id)displayName;
+//@end
+//@interface SBApplicationIcon : NSObject
+//- (void)launchFromLocation:(int)location;
+//- (id)displayName;
+//- (id)application;
+//@end
 @interface UIApplication (Asos)
 - (BOOL)launchApplicationWithIdentifier:(id)arg1 suspended:(BOOL)arg2;
 -(void)_handleMenuButtonEvent;

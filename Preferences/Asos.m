@@ -39,12 +39,6 @@
 @property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
 @end
 
-@interface PSTableCell (Asos)
--(id)initWithStyle:(NSInteger)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
-@end
-@interface PSTableCell (Asos)
--(id)initWithStyle:(NSInteger)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
-@end
 @interface AsosCustomCell : PSTableCell
 //@property (nonatomic) UIView* contentView;
 @end
@@ -62,30 +56,6 @@
 #define kSettingsLogoPath	@"/Library/PreferenceBundles/Asos.bundle/Logo@2x.png"
 
 static AsosListController *controller;
-
-
-/* * * * TEST TEST TEST TEST TEST * * * * */
-//@interface UIKeyboard (Asos)
-//- (id)initWithFrame:(struct CGRect)arg1;
-//@end
-//@implementation UIKeyboard
-//- (id)initWithFrame:(struct CGRect)frame {
-//	self = [super initWithFrame:frame];
-//	if (self) {
-//		self.hidden = YES;
-//	}
-//	return self;
-//}
-//@end
-//
-//UIToolbar* numberToolbar = [[UIToolbar alloc]initWithFrame:CGRectMake(0, 0, 320, 50)];
-//numberToolbar.barStyle = UIBarStyleBlackTranslucent;
-//numberToolbar.items = [NSArray arrayWithObjects:
-//					   [[UIBarButtonItem alloc]initWithTitle:@"Return" style:UIBarButtonItemStyleBordered target:self action:@selector(returnNumberPad)],
-//					   nil];
-//[numberToolbar sizeToFit];
-//numberTextField.inputAccessoryView = numberToolbar;
-/* * * * * * * * * * * * * * * * * * * * */
 
 
 
