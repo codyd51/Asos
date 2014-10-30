@@ -7,19 +7,10 @@
 
 #import <objc/runtime.h>
 #import <AudioToolbox/AudioServices.h>
-#import <SpringBoard/SBApplicationIcon.h>
-#import <SpringBoard/SBDeviceLockController.h>
-#import <SpringBoard/SBIconController.h>
-#import <SpringBoard/SBIconViewMap.h>
-#import <SpringBoard/SBIconModel.h>
-#import <SpringBoard/SBIconView.h>
-#import <SpringBoardUIServices/SBUIPasscodeLockViewSimple4DigitKeypad.h>
 #import "Interfaces.h"
 
 #define DEBUG_PREFIX @" [Asos]"
 #import "DebugLog.h"
-
-
 
 @interface NSObject (AssociatedObject)
 @property (nonatomic, strong) id associatedObject;
@@ -78,7 +69,41 @@ static BOOL useRealPass;
 static BOOL atTime;
 static BOOL onceRespring;
 
+// UNDROUPED
 
+@protocol SBUIBiometricEventMonitorDelegate
+@required
+-(void)biometricEventMonitor:(id)monitor handleBiometricEvent:(unsigned)event;
+@end
+
+@interface SBUIBiometricEventMonitor : NSObject
+- (void)addObserver:(id)arg1;
+- (void)removeObserver:(id)arg1;
+- (void)_startMatching;
+- (void)_setMatchingEnabled:(BOOL)arg1;
+- (BOOL)isMatchingEnabled;
+@end
+
+@interface BiometricKit : NSObject
++ (id)manager;
+@end
+
+#define TouchIDFingerDown  1
+#define TouchIDFingerUp    0
+#define TouchIDFingerHeld  2
+#define TouchIDMatched     3
+#define TouchIDMaybeMatched 4
+#define TouchIDNotMatched  9
+
+@interface BTTouchIDController : NSObject <SBUIBiometricEventMonitorDelegate> {
+	BOOL isMonitoring;
+	BOOL previousMatchingSetting;
+}
+@property NSString* idToOpen;
++(id)sharedInstance;
+-(void)startMonitoring;
+-(void)stopMonitoring;
+@end
 
 // Interfaces ------------------------------------------------------------------
 
@@ -94,8 +119,6 @@ static BOOL onceRespring;
 @interface SBApplicationIcon ()
 - (void)shade;
 @end
-
-
 
 // Helpers ---------------------------------------------------------------------
 
@@ -253,7 +276,8 @@ void dismissToApp() {
 			// To fix the last bubble not dissapearing
 			if (!isFromMulti) {
 				[NSTimer scheduledTimerWithTimeInterval:0.3 target:self selector:@selector(resetFailedPass) userInfo:nil repeats:NO];
-			} else {
+			} 
+			else {
 				UIAlertView* homeAlert = [[UIAlertView alloc] initWithTitle:@"Testing" message:@"Should exit to homescreen now." delegate:nil cancelButtonTitle:@"Ok" otherButtonTitles:nil];
 				[homeAlert show];
 				
@@ -275,6 +299,8 @@ void dismissToApp() {
 		handler.passcodeView.alpha = 0;
 		handler.blurView.alpha = 0;
 	}];
+
+	[[BTTouchIDController sharedInstance] stopMonitoring];
 }
 - (void)passcodeLockNumberPadBackspaceButtonHit:(id)arg1 {
 	DebugLog0;
@@ -291,9 +317,11 @@ void dismissToApp() {
 	
 	[UIView animateWithDuration:0.5 animations:^{
 		handler.passcodeView.statusTitleView.text = @"✗";
-	}];
-	[UIView animateWithDuration:0.5 animations:^{
-		handler.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter Passcode to open %@", dispName];
+	} completion:^(BOOL finished){
+		[UIView animateWithDuration:0.5 animations:^{
+			//TODO: Only if Touch ID is allowed
+			handler.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Try again"];
+		}];
 	}];
 	
 	[self resetForFailedPasscode];
@@ -308,7 +336,7 @@ void dismissToApp() {
 	
 	self = [super init];
 	if (self) {
-		// make blue view ...
+		// make blur view ...
 		
 		_blurView = [[_UIBackdropView alloc] initWithFrame:CGRectZero
 								   autosizesToFitSuperview:YES settings:[_UIBackdropViewSettings settingsForPrivateStyle:3900]];
@@ -319,6 +347,7 @@ void dismissToApp() {
 		
 		// make passcode view ...
 		_passcodeView = [[AsosPasscodeView alloc] init];
+		_passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Touch ID or enter passcode to open blah"];
 		DebugLog(@"self.passcodeView = %@", _passcodeView);
 		
 		
@@ -337,7 +366,6 @@ void dismissToApp() {
 	
 	currentlyOpening = passedID;
 	[self.passcodeView reset];
-	self.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter Passcode to open %@", passedDisplayName];
 
 	self.blurView.alpha = 0;
 	self.passcodeView.alpha = 0;
@@ -347,9 +375,16 @@ void dismissToApp() {
 	[window addSubview:self.passcodeView];
 	
 	[UIView animateWithDuration:0.4 animations:^{
+		//TODO: Only if Touch ID is allowed
+		self.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Touch ID or enter passcode to open %@", passedDisplayName];
 		self.passcodeView.alpha = 1.0;
 		self.blurView.alpha = 1.0;
 	}];
+
+	BTTouchIDController* sharedBT = [BTTouchIDController sharedInstance];
+	[sharedBT startMonitoring];
+	sharedBT.idToOpen = passedID;
+
 }
 - (void)removePasscodeView {
 	DebugLog0;
@@ -361,6 +396,8 @@ void dismissToApp() {
 	
 	[self.passcodeView removeFromSuperview];
 	[self.blurView removeFromSuperview];
+
+	[[BTTouchIDController sharedInstance] stopMonitoring];
 }
 - (void)removeLocked {
 	DebugLog0;
@@ -398,7 +435,96 @@ void dismissToApp() {
 }
 @end
 
+@implementation BTTouchIDController
 
++(id)sharedInstance {
+	// Setup instance for current class once
+	static id sharedInstance = nil;
+	static dispatch_once_t token = 0;
+	dispatch_once(&token, ^{
+		sharedInstance = [self new];
+	});
+	// Provide instance
+	return sharedInstance;
+}
+
+-(void)biometricEventMonitor:(id)monitor handleBiometricEvent:(unsigned)event {
+	switch(event) {
+		case TouchIDFingerDown:
+			NSLog(@"[Asos] Touched Finger Down");
+			break;
+		case TouchIDFingerUp:
+			NSLog(@"[Asos] Touched Finger Up");
+			break;
+		case TouchIDFingerHeld:
+			NSLog(@"[Asos] Touched Finger Held");
+			break;
+		case TouchIDMatched:
+			NSLog(@"[Asos] Touched Finger MATCHED :DDDDDDD");
+			[handler removePasscodeView];
+			[[UIApplication sharedApplication] launchApplicationWithIdentifier:self.idToOpen suspended:NO];
+			[self stopMonitoring];
+			break;
+		case TouchIDMaybeMatched:
+			NSLog(@"[Asos] Touched Finger Maybe Matched");
+			[handler removePasscodeView];
+			[[UIApplication sharedApplication] launchApplicationWithIdentifier:self.idToOpen suspended:NO];
+			[self stopMonitoring];
+			break;
+		case TouchIDNotMatched:
+			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+			NSLog(@"[Asos] Touched Finger NOT MATCHED DDDDDDD:");
+			[handler.passcodeView resetFailedPass];
+			break;
+		case 10:
+			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+			NSLog(@"[Asos] Touched Finger NOT MATCHED DDDDDDD:");
+			[handler.passcodeView resetFailedPass];
+			break;
+		default:
+			//log(@"Touched Finger Other Event"); // Unneeded and annoying
+			break;
+	}
+}
+
+-(void)startMonitoring {
+	// If already monitoring, don't start again
+	if(isMonitoring) {
+		return;
+	}
+	isMonitoring = YES;
+
+	// Get current monitor instance so observer can be added
+	SBUIBiometricEventMonitor* monitor = [[objc_getClass("BiometricKit") manager] delegate];
+	// Save current device matching state
+	previousMatchingSetting = [monitor isMatchingEnabled];
+
+	// Begin listening :D
+	[monitor addObserver:self];
+	[monitor _setMatchingEnabled:YES];
+	[monitor _startMatching];
+
+	NSLog(@"[Asos] Started monitoring");
+}
+
+-(void)stopMonitoring {
+	// If already stopped, don't stop again
+	if(!isMonitoring) {
+		return;
+	}
+	isMonitoring = NO;
+
+	// Get current monitor instance so observer can be removed
+	SBUIBiometricEventMonitor* monitor = [[objc_getClass("BiometricKit") manager] delegate];
+	
+	// Stop listening
+	[monitor removeObserver:self];
+	[monitor _setMatchingEnabled:previousMatchingSetting];
+
+	NSLog(@"[Asos] Stopped Monitoring");
+}
+
+@end
 
 // H00KS -----------------------------------------------------------------------
 
@@ -457,12 +583,15 @@ void dismissToApp() {
 	
 	id image = %orig;
 	
+	//This works really, really bad. Commenting out for now
+	/*
 	if (lockedApps && [lockedApps containsObject:[self applicationBundleID]]) {
 		[self shade];
 	} else {
 		DebugLog(@"no locked apps.");
 	}
-	
+	*/
+
 	return image;
 }
 
@@ -477,18 +606,22 @@ void dismissToApp() {
 	int blurStyle = kUIBackdropViewSettingsDark;
 	
 	_UIBackdropView *shade = [[_UIBackdropView alloc] initWithFrame:CGRectZero
-											autosizesToFitSuperview:NO
+											autosizesToFitSuperview:YES
 														   settings:[_UIBackdropViewSettings settingsForPrivateStyle:blurStyle]];
 	[shade setBlurQuality:@"default"];
 	
 	CGRect frame = iconView.frame;
 	shade.frame = frame;
+
+	shade.clipsToBounds = YES;
 	
 	DebugLog(@"> created shade: %@", shade);
-	[iconView addSubview:shade];
+	[iconView insertSubview:shade atIndex:0];
 }
 %end
 
+
+// BEGIN IOS 7 COMPATIBLITY ------------------------------------>>>
 
 %hook SBAppSliderController
 - (id)init {
@@ -501,13 +634,14 @@ void dismissToApp() {
 	
 	scroller = scroller1;
 	indexTapped = tapped;
-	if (isUnlocking) {
+	//if (isUnlocking) {
 		isToMulti = YES;
 		appToOpen = [openApps objectAtIndex:tapped];
 		DebugLog(@"appToOpen: %@", appToOpen);
 		
+		NSString* appDisplayName = SBSCopyLocalizedApplicationNameForDisplayIdentifier(appToOpen);
 		if ([lockedApps containsObject:appToOpen]) {
-			NSString* appDisplayName = SBSCopyLocalizedApplicationNameForDisplayIdentifier(appToOpen);
+			//NSLog(@"[Asos] appDisplayName: %@", appDisplayName);
 			//SBApplication* appWithDisplay = [[SBApplication alloc] initWithBundleIdentifier:appToOpen];
 			[handler showPasscodeViewWithBundleID:appToOpen andDisplayName:appDisplayName];
 			/*
@@ -519,13 +653,17 @@ void dismissToApp() {
 			return;
 			*/
 		}
-		else %orig;
-	}
-	else %orig;
+		else {
+			//NSLog(@"[Asos] %@ is not a locked app.", appDisplayName);
+			%orig;
+		}
+	//}
+	//else %orig;
 }
 - (id)_beginAppListAccess { 
 	DebugLog0;
 	openApps = %orig;
+	//NSLog(@"[Asos] openApps is %@", openApps);
 	return openApps;
 }
 %end
@@ -557,6 +695,13 @@ void dismissToApp() {
 }
 %end
 
+// END IOS7 COMPATIBILITY ------------------------------------>>>
+
+// BEGIN IOS8 COMPATIBILITY ------------------------------------>>>
+
+
+
+// END IOS 8 COMPATIBLITY ------------------------------------>>>
 
 // Stratos Compatibility ------------------------------------>>>
 %hook SBUIController

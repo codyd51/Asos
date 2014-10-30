@@ -66,7 +66,7 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 //@end
 //@interface SBUIPasscodeLockViewSimple4DigitKeypad : SBUIPasscodeLockViewWithKeypad
 //@end
-
+/*
 @interface _UIBackdropView : UIView
 - (id)initWithFrame:(CGRect)arg1 autosizesToFitSuperview:(BOOL)arg2 settings:(id)arg3;
 - (void)setBlurQuality:(id)arg1;
@@ -81,6 +81,7 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 - (void)animateDismissalToDisplayIdentifier:(id)arg1 withCompletion:(id)arg2;
 - (void)sliderScroller:(id)arg1 itemTapped:(unsigned long long)arg2;
 @end
+*/
 //@interface SBIconController : NSObject
 //+(id)sharedInstance;
 //-(void)handleHomeButtonTap;
@@ -92,7 +93,7 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 @interface CAFilter : NSObject
 +(instancetype)filterWithName:(NSString *)name;
 @end
-//@interface SBDeviceLockController : NSObject
+@interface SBDeviceLockController : NSObject
 //{
 //    int _lockState;
 //    double _lastLockDate;
@@ -103,16 +104,16 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 //    NSString *_lastIncorrectPasscodeAttempt;
 //}
 //
-//+ (id)_sharedControllerIfExists;
-//+ (id)sharedController;
-//+ (id)_sharedControllerCreateIfNecessary:(_Bool)arg1;
-//- (id)description;
-//- (void)_uncachePasscodeIfNecessary;
-//- (void)_cachePassword:(id)arg1;
++ (id)_sharedControllerIfExists;
++ (id)sharedController;
++ (id)_sharedControllerCreateIfNecessary:(_Bool)arg1;
+- (id)description;
+- (void)_uncachePasscodeIfNecessary;
+- (void)_cachePassword:(id)arg1;
 //- (_Bool)shouldAllowUnlockToApplication:(id)arg1;
 //- (void)_removeDeviceLockDisableAssertion:(id)arg1;
 //- (void)_addDeviceLockDisableAssertion:(id)arg1;
-//- (_Bool)attemptDeviceUnlockWithPassword:(id)arg1 appRequested:(_Bool)arg2;
+- (_Bool)attemptDeviceUnlockWithPassword:(id)arg1 appRequested:(_Bool)arg2;
 //- (void)_notifyOfFirstUnlock;
 //- (void)_setLockState:(int)arg1;
 //- (void)_enablePasscodeLockImmediately:(_Bool)arg1;
@@ -137,12 +138,81 @@ extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSStri
 //- (id)lastLockDate;
 //- (void)dealloc;
 //- (id)init;
-//
-//@end
+
+@end
 @interface SwitcherTrayView
 + (id)sharedInstance;
 - (void)closeTray;
 @end
+@interface SBIconView : UIView
+@end
+@interface SBIconViewMap : NSObject
++(id)homescreenMap;
+-(SBIconView*)iconViewForIcon:(id)arg1;
+@end
 @interface SwitcherTrayCardView : UIView
 @property (nonatomic, retain) id application;
+@end
+
+#import <notify.h>
+#import <QuartzCore/CALayer.h>
+#import <QuartzCore/QuartzCore.h>
+#include <dlfcn.h>
+extern "C" NSString * SBSCopyLocalizedApplicationNameForDisplayIdentifier(NSString *identifier);
+
+@interface SBIcon : NSObject
+- (void)launchFromLocation:(int)location;
+- (id)displayName;
+@end
+@interface SBApplicationIcon : NSObject
+- (void)launchFromLocation:(int)location;
+- (id)displayName;
+- (id)application;
+-(id)applicationBundleID;
+@end
+@interface SBUIPasscodeLockViewBase : UIView
+@property(nonatomic) _Bool shouldResetForFailedPasscodeAttempt;
+@property(nonatomic) unsigned long long biometricMatchMode;
+@property(nonatomic, getter=_luminosityBoost, setter=_setLuminosityBoost:) double luminosityBoost;
+@property(retain, nonatomic) id backgroundLegibilitySettingsProvider;
+//@property(nonatomic, getter=_entryField, setter=_setEntryField:) SBUIPasscodeEntryField *_entryField;
+@property(nonatomic, getter=_entryField, setter=_setEntryField:) id _entryField;
+@property(retain, nonatomic) UIColor *customBackgroundColor;
+@property(nonatomic) double backgroundAlpha;
+@property(nonatomic) _Bool showsStatusField;
+@property(nonatomic) _Bool showsEmergencyCallButton;
+@property(nonatomic) NSString *passcode;
+@property(nonatomic) int style;
+@property(nonatomic) id <SBUIPasscodeLockViewDelegate> delegate;
+- (void)reset;
+- (void)resetForFailedPasscode;
+@end
+@interface SBUIPasscodeLockViewWithKeypad : SBUIPasscodeLockViewBase
+@property(retain, nonatomic) UILabel *statusTitleView;
+-(id)passcode;
+@end
+@interface SBUIPasscodeLockViewSimple4DigitKeypad : SBUIPasscodeLockViewWithKeypad
+-(void)passcodeLockNumberPadCancelButtonHit:(id)arg1;
+-(void)passcodeLockNumberPadBackspaceButtonHit:(id)arg1;
+@end
+@interface _UIBackdropView : UIView
+- (id)initWithFrame:(CGRect)arg1 autosizesToFitSuperview:(BOOL)arg2 settings:(id)arg3;
+- (void)setBlurQuality:(id)arg1;
+@end
+@interface _UIBackdropViewSettings : NSObject
++ (id)settingsForPrivateStyle:(int)arg1;
+@end
+@interface PassShower : NSObject <UIAlertViewDelegate>
+-(void)showPassViewWithBundleID:(NSString*)passedID andDisplayName:(NSString*)passedDisplayName toWindow:(UIView*)window;
+@end
+@interface SpringBoard : NSObject
+- (void)_handleMenuButtonEvent;
+@end
+@interface SBAppSliderController : NSObject
+- (void)animateDismissalToDisplayIdentifier:(id)arg1 withCompletion:(id)arg2;
+- (void)sliderScroller:(id)arg1 itemTapped:(unsigned long long)arg2;
+@end
+@interface SBIconController : NSObject
++(id)sharedInstance;
+-(void)handleHomeButtonTap;
 @end

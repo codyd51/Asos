@@ -26,6 +26,12 @@
 - (void)setUseRealPasscodeSwitch:(id)value specifier:(PSSpecifier *)specifier;
 - (void)setTimedPasscodeSwitch:(id)value specifier:(PSSpecifier *)specifier;
 @end
+@interface PSListController (Asos)
+-(id)initForContentSize:(CGSize)arg1;
+@end
+@interface PSTableCell (Asos)
+-(id)initWithStyle:(id)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
+@end
 
 @interface AsosListController ()
 @property (nonatomic, strong) UIBarButtonItem *respringButton;
@@ -40,7 +46,7 @@
 @end
 
 @interface AsosCustomCell : PSTableCell
-//@property (nonatomic) UIView* contentView;
+@property (nonatomic) UIView* contentView;
 @end
 
 @interface Applications : PSListController
@@ -180,8 +186,8 @@ static AsosListController *controller;
 						  initWithTitle:@"Respring now?"
 						  message:@"Please Respring to enable or disable this tweak."
 						  delegate:self
-						  cancelButtonTitle:@"NO"
-						  otherButtonTitles:@"YES", nil];
+						  cancelButtonTitle:@"Cancel"
+						  otherButtonTitles:@"Respring", nil];
 	alert.tag = 996699;
 	[alert show];
 }
@@ -287,7 +293,8 @@ static AsosListController *controller;
 				AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
 				
 				[self hidePasscodeAlert];
-				[self.rootController popViewControllerAnimated:YES];
+				//[self.rootController popViewControllerAnimated:YES];
+				[self.rootController popToRootViewControllerAnimated:YES];
 			}
 		}
 	}
