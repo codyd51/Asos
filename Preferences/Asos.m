@@ -12,7 +12,7 @@
 #import <ManagedConfiguration/MCPasscodeManager.h>
 #import "Interfaces.h"
 
-#define DEBUG_PREFIX @" [Asos:Prefs]"
+#define DEBUG_PREFIX @" [ Asos : Prefs ]"
 #import "../DebugLog.h"
 
 
@@ -28,25 +28,27 @@
 @end
 @interface PSListController (Asos)
 -(id)initForContentSize:(CGSize)arg1;
+//IOS 8 EXCLUSIVE
+-(void)popRecursivelyToRootController;
 @end
 @interface PSTableCell (Asos)
 -(id)initWithStyle:(id)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
 @end
 
 @interface AsosListController ()
-@property (nonatomic, strong) UIBarButtonItem *respringButton;
-@property (nonatomic, strong) UIAlertView *passcodeAlert;
-@property (nonatomic, strong) UITextField *loginField;
-@property (nonatomic, strong) _UIBackdropView *blurView;
-@property (nonatomic, strong) PSSpecifier *passcodeInputSpecifier;
-@property (nonatomic, strong) PSSpecifier *timeInputSpecifier;
+@property (nonatomic, strong, retain) UIBarButtonItem *respringButton;
+@property (nonatomic, strong, retain) UIAlertView *passcodeAlert;
+@property (nonatomic, strong, retain) UITextField *loginField;
+@property (nonatomic, strong, retain) _UIBackdropView *blurView;
+@property (nonatomic, strong, retain) PSSpecifier *passcodeInputSpecifier;
+@property (nonatomic, strong, retain) PSSpecifier *timeInputSpecifier;
 @property (nonatomic, assign) int randNum;
 @property (nonatomic, assign) BOOL passcodeInputIsShowing;
-@property (nonatomic, strong) UITapGestureRecognizer *tapRecognizer;
+@property (nonatomic, strong, retain) UITapGestureRecognizer *tapRecognizer;
 @end
 
 @interface AsosCustomCell : PSTableCell
-@property (nonatomic) UIView* contentView;
+@property (nonatomic, retain, strong) UIView* contentView;
 @end
 
 @interface Applications : PSListController
@@ -57,11 +59,11 @@
 //
 // Globals
 //
-#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.cortexdevteam.asos.plist"]
+#define kSettingsPath [NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
 #define kSettingsIconPath	@"/Library/PreferenceBundles/Asos.bundle/Asos@2x.png"
 #define kSettingsLogoPath	@"/Library/PreferenceBundles/Asos.bundle/Logo@2x.png"
 
-static AsosListController *controller;
+__strong AsosListController *controller;
 
 
 
@@ -71,10 +73,13 @@ static AsosListController *controller;
 @implementation AsosListController
 
 - (id)initForContentSize:(CGSize)size {
-	DebugLog(@"settings init'd.");
-	
+	NSLog(@"[Asos] settings init'd.");
 	self = [super initForContentSize:size];
+	NSLog(@"[Asos] self is %@", self);
+
 	if (self) {
+		NSLog(@"[Asos] IF self is %@", self);
+
 		controller = self;
 		_randNum = 0;
 		_tapRecognizer = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tap:)];
@@ -91,11 +96,13 @@ static AsosListController *controller;
 		
 		// Show passcode lock alert whenever Preferences resumes from
 		// background straight into Asos settings controller
+		//Seems to be causing bugs, commenting out for now
+		/*
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(applicationEnteredForeground:)
 													 name:UIApplicationWillEnterForegroundNotification
 												   object:nil];
-		
+		*/
 		// listen for keypad to appear/disappear
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(passcodeInputKeypadDidShow)
@@ -157,14 +164,14 @@ static AsosListController *controller;
 	[[NSUserDefaults standardUserDefaults] synchronize];
 	
 	// indicate that a Respring is required
-	self.respringButton.title = @"⚠️ Respring";
+	self.respringButton.title = @"Respring";
 }
 - (void)setUseRealPasscodeSwitch:(id)value specifier:(PSSpecifier *)specifier {
 	DebugLog(@"setting: %@ for key: %@", value, [specifier propertyForKey:@"key"]);
 	
 	[self setPreferenceValue:value specifier:specifier];
 	[[NSUserDefaults standardUserDefaults] synchronize];
-	notify_post("com.cortexdevteam.asos/settingschanged");
+	notify_post("com.phillipt.asos/settingschanged");
 	
 	[self showOrHidePasscodeInputCell];
 }
@@ -173,7 +180,7 @@ static AsosListController *controller;
 	
 	[self setPreferenceValue:value specifier:specifier];
 	[[NSUserDefaults standardUserDefaults] synchronize];
-	notify_post("com.cortexdevteam.asos/settingschanged");
+	notify_post("com.phillipt.asos/settingschanged");
 	
 	[self showOrHideTimeInputCell];
 }
@@ -183,7 +190,7 @@ static AsosListController *controller;
 	DebugLog0;
 	
 	UIAlertView *alert = [[UIAlertView alloc]
-						  initWithTitle:@"Respring now?"
+						  initWithTitle:@"Respring?"
 						  message:@"Please Respring to enable or disable this tweak."
 						  delegate:self
 						  cancelButtonTitle:@"Cancel"
@@ -200,7 +207,7 @@ static AsosListController *controller;
 									   autosizesToFitSuperview:YES
 													  settings:[_UIBackdropViewSettings settingsForPrivateStyle:3900]];
 		
-		[self.blurView setBlurQuality:@"default"];
+		[self.blurView setBlurQuality:@"low"];
 		self.blurView.alpha = 0;
 		
 		[[[UIApplication sharedApplication] keyWindow] addSubview:self.blurView];
@@ -250,13 +257,24 @@ static AsosListController *controller;
 			[self respring];
 		}
 		
-	} else { // Passcode Alert
+	} 
+	else { // Passcode Alert
 		
 		if (buttonIndex == alertView.cancelButtonIndex) { // Cancel button
+			NSLog(@"[Asos] Hit cancel button");
+
+			//IF is iOS 7
+				[self.rootController popToRootViewControllerAnimated:YES];
+			//ELSE IF is iOS 8
+				[self.rootController popRecursivelyToRootController];
+			//ENDIF
+
+			NSLog(@"[Asos] rootController is %@", self.rootController);
+			//NSLog(@"[Asos] pushedArray is %@", pushedArray);
 			[self hidePasscodeAlert];
-			[self.rootController popViewControllerAnimated:YES];
 			
-		} else {
+		} 
+		else {
 			UITextField *loginField = [alertView textFieldAtIndex:0];
 			NSString *code = loginField.text;
 			BOOL passIsValid = NO;
@@ -270,13 +288,21 @@ static AsosListController *controller;
 				
 				[[$MC sharedManager] unlockDeviceWithPasscode:code outError:&error];
 				if (error) {
+					//TODO: remove them form page if passcode is rejected
+					//Done?
 					DebugLog(@"passcode rejected by MC");
+					//IF is iOS 7
+						[self.rootController popToRootViewControllerAnimated:YES];
+					//ELSE IF is iOS 8
+						[self.rootController popRecursivelyToRootController];
+					//ENDIF
 				} else {
 					DebugLog(@"passcode accepted by MC");
 					passIsValid = YES;
 				}
 				
-			} else { // using custom passcode
+			} 
+			else { // using custom passcode
 				NSString *customPasscode = [self readPreferenceValue:[self specifierForID:@"passcode"]];
 				if ([code isEqualToString:customPasscode]) {
 					passIsValid = YES;
@@ -291,17 +317,21 @@ static AsosListController *controller;
 				
 				// wrong code, much vibration
 				AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
-				
-				[self hidePasscodeAlert];
+			
 				//[self.rootController popViewControllerAnimated:YES];
-				[self.rootController popToRootViewControllerAnimated:YES];
+				//IF is iOS 7
+					[self.rootController popToRootViewControllerAnimated:YES];
+				//ELSE IF is iOS 8
+					[self.rootController popRecursivelyToRootController];
+				//ENDIF
+				[self hidePasscodeAlert];
 			}
 		}
 	}
 }
 - (void)respring {
 	NSLog(@"Asos called for a respring, bye-bye");
-	system("killall -HUP SpringBoard");
+	system("killall backboardd");
 }
 
 //
@@ -396,7 +426,7 @@ static AsosListController *controller;
 		@"From Phillip Tennen and the Cortex Dev Team",
 		@"Use responsibly.",
 		@"Follow @phillipten on Twitter.",
-		@"Follow @CortexDevTeam on Twitter.",
+		@"Follow @phillipt on Twitter.",
 		@"We love you /r/jailbreak!",
 		@"Is this thing on?"
 		];

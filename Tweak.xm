@@ -270,6 +270,9 @@ void dismissToApp() {
 			
 			// continue launching the app
 			[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
+
+			//stop looking for fingerprint
+			[[BTTouchIDController sharedInstance] stopMonitoring];
 				
 		} else {
 			DebugLog(@"...passcode was INVALID.");
