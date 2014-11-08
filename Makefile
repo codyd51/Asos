@@ -5,7 +5,7 @@ THEOS_BUILD_DIR = Packages
 TWEAK_NAME = Asos
 TWEAK_CODESIGN_FLAGS = -SEntitlements.plist
 Asos_CFLAGS = -fobjc-arc
-Asos_FILES = Tweak.xm
+Asos_FILES = Tweak.xm BTTouchIDController.mm
 Asos_FRAMEWORKS = UIKit CoreGraphics QuartzCore
 Asos_PRIVATE_FRAMEWORKS = SpringBoardServices SpringBoardUIServices AudioToolBox AppSupport BiometricKit
 

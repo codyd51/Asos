@@ -3,6 +3,7 @@
 		Bundles = (
 			"com.apple.springboard",
 			"com.cortexdevteam.stratos",
+			"com.apple.Preferences"
 		);
 	};
 }

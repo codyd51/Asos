@@ -4,7 +4,7 @@
 //  (c) 2014 Phillip Tennen.
 //
 //
-
+#import "../BTTouchIDController.h"
 #import <AudioToolbox/AudioServices.h>
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
@@ -25,6 +25,7 @@
 - (void)setEnabledSwitch:(id)value specifier:(PSSpecifier *)specifier;
 - (void)setUseRealPasscodeSwitch:(id)value specifier:(PSSpecifier *)specifier;
 - (void)setTimedPasscodeSwitch:(id)value specifier:(PSSpecifier *)specifier;
+- (void)hidePasscodeAlert;
 @end
 @interface PSListController (Asos)
 -(id)initForContentSize:(CGSize)arg1;
@@ -65,11 +66,15 @@
 
 __strong AsosListController *controller;
 
-
-
 //
 // Settings Controller
 //
+
+void prefsTouchUnlock() {
+	NSLog(@"[Asos] fingerprint valid, unlock Prefs");
+	[controller hidePasscodeAlert];
+}
+
 @implementation AsosListController
 
 - (id)initForContentSize:(CGSize)size {
@@ -97,12 +102,10 @@ __strong AsosListController *controller;
 		// Show passcode lock alert whenever Preferences resumes from
 		// background straight into Asos settings controller
 		//Seems to be causing bugs, commenting out for now
-		/*
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(applicationEnteredForeground:)
 													 name:UIApplicationWillEnterForegroundNotification
 												   object:nil];
-		*/
 		// listen for keypad to appear/disappear
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(passcodeInputKeypadDidShow)
@@ -113,6 +116,13 @@ __strong AsosListController *controller;
 												 selector:@selector(passcodeInputKeypadDidHide)
 													 name:UIKeyboardWillHideNotification
 												   object:nil];
+
+		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+											NULL,
+											(CFNotificationCallback)prefsTouchUnlock,
+											CFSTR("com.phillipt.asos.prefstouchunlock"),
+											NULL,
+											CFNotificationSuspensionBehaviorDeliverImmediately);
 	}
 	return self;
 }
@@ -132,6 +142,7 @@ __strong AsosListController *controller;
 	UIImage *icon = [[UIImage alloc] initWithContentsOfFile:kSettingsIconPath];
 	if (icon) {
 		UIImageView *iconView = [[UIImageView alloc] initWithImage:icon];
+		iconView.frame = CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, iconView.frame.size.height);
 		self.navigationItem.titleView = iconView;
 	}
 }
@@ -142,10 +153,12 @@ __strong AsosListController *controller;
 	[self showOrHideTimeInputCell];
 	[self showOrHidePasscodeInputCell];
 }
+
 - (void)viewWillAppear:(BOOL)animated {
 	[super viewWillAppear:animated];
 	[self showPasscodeAlert];
 }
+
 - (void)applicationEnteredForeground:(id)something {
 	DebugLog0;
 	
@@ -216,7 +229,7 @@ __strong AsosListController *controller;
 	// lazy load passcode view
 	if (!self.passcodeAlert) {
 		self.passcodeAlert = [[UIAlertView alloc] 	initWithTitle:@"Asos"
-														 message:@"Enter passcode to access Asos settings"
+														 message:@"Enter passcode or use Touch ID to access Asos settings"
 														delegate:self
 											   cancelButtonTitle:@"Cancel"
 											   otherButtonTitles:@"Ok", nil];
@@ -233,11 +246,16 @@ __strong AsosListController *controller;
 	
 	// fade in blur, show the passcode alert
 	[self.passcodeAlert show];
+
+	//star monitoring Touch ID
+	[[BTTouchIDController sharedInstance] startMonitoring];
+
 	[UIView animateWithDuration:0.4 animations:^{
 		self.blurView.alpha = 1.0;
 	}];
 }
-- (void)hidePasscodeAlert {
+
+- (void)hidePasscodeAlert; {
 	DebugLog0;
 	
 	// dismiss alert, fade out blur
@@ -248,6 +266,8 @@ __strong AsosListController *controller;
 	self.passcodeAlert = nil;
 	self.blurView = nil;
 	self.loginField = nil;
+
+	[[BTTouchIDController sharedInstance] stopMonitoring];
 }
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
 	DebugLog(@"button clicked (%d) from alertView:%@", (int)buttonIndex, alertView);
@@ -256,7 +276,6 @@ __strong AsosListController *controller;
 		if (buttonIndex == alertView.firstOtherButtonIndex) {
 			[self respring];
 		}
-		
 	} 
 	else { // Passcode Alert
 		
@@ -391,8 +410,6 @@ __strong AsosListController *controller;
 }
 
 @end
-
-
 
 //
 // Logo Cell

@@ -4,7 +4,7 @@
 //	(c) 2014 Phillip Tennen.
 //
 //
-
+#import "BTTouchIDController.h"
 #import <objc/runtime.h>
 #import <AudioToolbox/AudioServices.h>
 #import "Interfaces.h"
@@ -30,7 +30,7 @@
 
 // Globals
 
-#define kSettingsPath	[NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.cortexdevteam.asos.plist"]
+#define kSettingsPath	[NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
 #define kUIBackdropViewSettingsDark				1
 #define kUIBackdropViewSettingsColorSample		2000
 #define kUIBackdropViewSettingsPasscodePaddle	3900
@@ -71,43 +71,10 @@ static BOOL onceRespring;
 
 // UNDROUPED
 
-@protocol SBUIBiometricEventMonitorDelegate
-@required
--(void)biometricEventMonitor:(id)monitor handleBiometricEvent:(unsigned)event;
-@end
-
-@interface SBUIBiometricEventMonitor : NSObject
-- (void)addObserver:(id)arg1;
-- (void)removeObserver:(id)arg1;
-- (void)_startMatching;
-- (void)_setMatchingEnabled:(BOOL)arg1;
-- (BOOL)isMatchingEnabled;
-@end
-
-@interface BiometricKit : NSObject
-+ (id)manager;
-@end
-
-#define TouchIDFingerDown  1
-#define TouchIDFingerUp    0
-#define TouchIDFingerHeld  2
-#define TouchIDMatched     3
-#define TouchIDMaybeMatched 4
-#define TouchIDNotMatched  9
-
-@interface BTTouchIDController : NSObject <SBUIBiometricEventMonitorDelegate> {
-	BOOL isMonitoring;
-	BOOL previousMatchingSetting;
-}
-@property NSString* idToOpen;
-+(id)sharedInstance;
--(void)startMonitoring;
--(void)stopMonitoring;
-@end
-
 // Interfaces ------------------------------------------------------------------
 
 @interface AsosPasscodeView : SBUIPasscodeLockViewSimple4DigitKeypad
+-(void)validPassEntered;
 @end
 
 @interface AsosPassShower : NSObject <UIAlertViewDelegate>
@@ -244,37 +211,10 @@ void dismissToApp() {
 		}
 		
 		if (enteredCorrectPass) {
-			DebugLog(@"...passcode was VALID.");
-
-			if (onceRespring) {
-				[lockedApps removeObject:currentlyOpening];
-				[oncePerRespring addObject:currentlyOpening];
-			}
-			if (atTime) {
-				[timeLockedApps addObject:currentlyOpening];
-				[lockedApps removeObject:currentlyOpening];
-				NSTimer* lockRemover = [NSTimer scheduledTimerWithTimeInterval:[timeInterval intValue] target:handler selector:@selector(removeLocked) userInfo:nil repeats:NO];
-				[lockRemover setAssociatedObject:currentlyOpening];
-			}
-			
-			// close the switcher
-			notify_post("com.cortexdevteam.asos.multitaskEscape");
-			
-			// dismiss the passcode view
-			[UIView animateWithDuration:0.4 animations:^{
-				handler.passcodeView.statusTitleView.text = @"✓";
-				handler.passcodeView.alpha = 0;
-				handler.blurView.alpha = 0;
-				//[passcodeView removeFromSuperview];
-			}];
-			
-			// continue launching the app
-			[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
-
-			//stop looking for fingerprint
-			[[BTTouchIDController sharedInstance] stopMonitoring];
-				
-		} else {
+			//segmented into seperate method so we can use it with Touch ID monitering
+			[self validPassEntered];
+		} 
+		else {
 			DebugLog(@"...passcode was INVALID.");
 			// To fix the last bubble not dissapearing
 			if (!isFromMulti) {
@@ -329,6 +269,38 @@ void dismissToApp() {
 	
 	[self resetForFailedPasscode];
 }
+-(void)validPassEntered {
+	DebugLog(@"...passcode was VALID.");
+
+	if (onceRespring) {
+		[lockedApps removeObject:currentlyOpening];
+		[oncePerRespring addObject:currentlyOpening];
+	}
+	if (atTime) {
+		[timeLockedApps addObject:currentlyOpening];
+		[lockedApps removeObject:currentlyOpening];
+		NSTimer* lockRemover = [NSTimer scheduledTimerWithTimeInterval:[timeInterval intValue] target:handler selector:@selector(removeLocked) userInfo:nil repeats:NO];
+		[lockRemover setAssociatedObject:currentlyOpening];
+	}
+			
+	// close the switcher
+	notify_post("com.phillipt.asos.multitaskEscape");
+	
+	// dismiss the passcode view
+	[UIView animateWithDuration:0.4 animations:^{
+		handler.passcodeView.statusTitleView.text = @"✓";
+		handler.passcodeView.alpha = 0;
+		handler.blurView.alpha = 0;
+		//[passcodeView removeFromSuperview];
+	}];
+			
+	// continue launching the app
+	[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
+
+	//stop looking for fingerprint
+	[[BTTouchIDController sharedInstance] stopMonitoring];
+}
+
 @end
 
 
@@ -358,7 +330,7 @@ void dismissToApp() {
 		CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
 										NULL,
 										(CFNotificationCallback)loadPreferences,
-										CFSTR("com.cortexdevteam.asos/settingschanged"),
+										CFSTR("com.phillipt.asos/settingschanged"),
 										NULL,
 										CFNotificationSuspensionBehaviorDeliverImmediately);
 	}
@@ -436,97 +408,6 @@ void dismissToApp() {
 		}
 	}
 }
-@end
-
-@implementation BTTouchIDController
-
-+(id)sharedInstance {
-	// Setup instance for current class once
-	static id sharedInstance = nil;
-	static dispatch_once_t token = 0;
-	dispatch_once(&token, ^{
-		sharedInstance = [self new];
-	});
-	// Provide instance
-	return sharedInstance;
-}
-
--(void)biometricEventMonitor:(id)monitor handleBiometricEvent:(unsigned)event {
-	switch(event) {
-		case TouchIDFingerDown:
-			NSLog(@"[Asos] Touched Finger Down");
-			break;
-		case TouchIDFingerUp:
-			NSLog(@"[Asos] Touched Finger Up");
-			break;
-		case TouchIDFingerHeld:
-			NSLog(@"[Asos] Touched Finger Held");
-			break;
-		case TouchIDMatched:
-			NSLog(@"[Asos] Touched Finger MATCHED :DDDDDDD");
-			[handler removePasscodeView];
-			[[UIApplication sharedApplication] launchApplicationWithIdentifier:self.idToOpen suspended:NO];
-			[self stopMonitoring];
-			break;
-		case TouchIDMaybeMatched:
-			NSLog(@"[Asos] Touched Finger Maybe Matched");
-			[handler removePasscodeView];
-			[[UIApplication sharedApplication] launchApplicationWithIdentifier:self.idToOpen suspended:NO];
-			[self stopMonitoring];
-			break;
-		case TouchIDNotMatched:
-			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
-			NSLog(@"[Asos] Touched Finger NOT MATCHED DDDDDDD:");
-			[handler.passcodeView resetFailedPass];
-			break;
-		case 10:
-			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
-			NSLog(@"[Asos] Touched Finger NOT MATCHED DDDDDDD:");
-			[handler.passcodeView resetFailedPass];
-			break;
-		default:
-			//log(@"Touched Finger Other Event"); // Unneeded and annoying
-			break;
-	}
-}
-
--(void)startMonitoring {
-	// If already monitoring, don't start again
-	if(isMonitoring) {
-		return;
-	}
-	isMonitoring = YES;
-
-	// Get current monitor instance so observer can be added
-	SBUIBiometricEventMonitor* monitor = [[objc_getClass("BiometricKit") manager] delegate];
-	// Save current device matching state
-	previousMatchingSetting = [monitor isMatchingEnabled];
-
-	// Begin listening :D
-	[monitor addObserver:self];
-	[monitor _setMatchingEnabled:YES];
-	[monitor _startMatching];
-
-	NSLog(@"[Asos] Started monitoring");
-}
-
--(void)stopMonitoring {
-	// If already stopped, don't stop again
-	if(!isMonitoring) {
-		return;
-	}
-	isMonitoring = NO;
-
-	// Get current monitor instance so observer can be removed
-	SBUIBiometricEventMonitor* monitor = [[objc_getClass("BiometricKit") manager] delegate];
-	
-	// Stop listening
-	[monitor removeObserver:self];
-	[monitor _setMatchingEnabled:previousMatchingSetting];
-
-	NSLog(@"[Asos] Stopped Monitoring");
-}
-
 @end
 
 // H00KS -----------------------------------------------------------------------
@@ -747,7 +628,16 @@ void dismissToApp() {
 %end
 //End Stratos Compatibility ---------------------------------<<<
 
+void touchUnlock() {
+	[handler removePasscodeView];
+	BTTouchIDController* controller = [BTTouchIDController sharedInstance];
+	[[UIApplication sharedApplication] launchApplicationWithIdentifier:controller.idToOpen suspended:NO];
+	[controller stopMonitoring];
+}
 
+void touchFailed() {
+	[handler.passcodeView resetFailedPass];
+}
 
 // Init ------------------------------------------------------------------------
 
@@ -770,16 +660,30 @@ void dismissToApp() {
 			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
 											NULL,
 											(CFNotificationCallback)loadPreferences,
-											CFSTR("com.cortexdevteam.asos/settingschanged"),
+											CFSTR("com.phillipt.asos/settingschanged"),
 											NULL,
 											CFNotificationSuspensionBehaviorDeliverImmediately);
 			
 			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
 											NULL,
 											(CFNotificationCallback)dismissToApp,
-											CFSTR("com.cortexdevteam.asos.multitaskEscape"),
+											CFSTR("com.phillipt.asos.multitaskEscape"),
 											NULL,
 											CFNotificationSuspensionBehaviorDeliverImmediately);
+
+			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+											NULL,
+											(CFNotificationCallback)touchUnlock,
+											CFSTR("com.phillipt.asos.touchunlock"),
+											NULL,
+											CFNotificationSuspensionBehaviorDeliverImmediately);
+			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(),
+											NULL,
+											(CFNotificationCallback)touchFailed,
+											CFSTR("com.phillipt.asos.touchfailed"),
+											NULL,
+											CFNotificationSuspensionBehaviorDeliverImmediately);
+
 		} else {
 			DebugLogC(@"ASOS is disabled");
 		}
