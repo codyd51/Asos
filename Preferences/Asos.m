@@ -142,7 +142,6 @@ void prefsTouchUnlock() {
 	UIImage *icon = [[UIImage alloc] initWithContentsOfFile:kSettingsIconPath];
 	if (icon) {
 		UIImageView *iconView = [[UIImageView alloc] initWithImage:icon];
-		iconView.frame = CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, iconView.frame.size.height);
 		self.navigationItem.titleView = iconView;
 	}
 }
@@ -423,6 +422,7 @@ void prefsTouchUnlock() {
 		UIImage *logo = [[UIImage alloc] initWithContentsOfFile:kSettingsLogoPath];
 		if (logo) {
 			UIImageView *logoView = [[UIImageView alloc] initWithImage:logo];
+			logoView.frame = CGRectMake(0, 0, [[UIScreen mainScreen] bounds].size.width, logoView.frame.size.height);
 			[self addSubview:logoView];
 		}
 		
