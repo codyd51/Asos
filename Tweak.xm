@@ -91,11 +91,26 @@ static BOOL onceRespring;
 // Helpers ---------------------------------------------------------------------
 
 void loadPreferences() {
+//static void PreferencesChangedCallback(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+	//[//preferences release];
+	CFStringRef appID = CFSTR("com.phillipt.asos");
+	CFArrayRef keyList = CFPreferencesCopyKeyList(appID, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
+	if (!keyList) {
+		NSLog(@"[Asos] There's been an error getting the key list!");
+		return;
+	}
+	prefs = (NSMutableDictionary *)CFBridgingRelease(CFPreferencesCopyMultiple(keyList, appID, kCFPreferencesCurrentUser, kCFPreferencesAnyHost));
+	if (!prefs) {
+		NSLog(@"[Asos] There's been an error getting the preferences dictionary!");
+	}
+	
 	DebugLogC(@"Tweak::loadPreferences()");
+
+	NSLog(@"[Asos] settings updated, prefs is %@", prefs);
 	
 	[lockedApps removeAllObjects];
-	
-	prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath] ?: [NSMutableDictionary dictionary];
+
+	//prefs = [NSMutableDictionary dictionaryWithContentsOfFile:kSettingsPath] ?: [NSMutableDictionary dictionary];
 	DebugLogC(@"read prefs from disk: %@", prefs);
 	
 	if (prefs[@"enabled"] && ![prefs[@"enabled"] boolValue]) {
@@ -117,7 +132,7 @@ void loadPreferences() {
 	if ([prefs objectForKey:@"onceRespring"]) {
 		onceRespring = [[prefs objectForKey:@"onceRespring"] boolValue];
 	} else {
-		onceRespring = YES;
+		onceRespring = NO;
 	}
 	DebugLogC(@"setting for onceRespring:%d", onceRespring);
 	
@@ -280,35 +295,38 @@ BOOL isTouchIDAvailable() {
 	[self resetForFailedPasscode];
 }
 -(void)validPassEntered {
-	DebugLog(@"...passcode was VALID.");
+	if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
+		DebugLog(@"...passcode was VALID.");
 
-	if (onceRespring) {
-		[lockedApps removeObject:currentlyOpening];
-		[oncePerRespring addObject:currentlyOpening];
-	}
-	if (atTime) {
-		[timeLockedApps addObject:currentlyOpening];
-		[lockedApps removeObject:currentlyOpening];
-		NSTimer* lockRemover = [NSTimer scheduledTimerWithTimeInterval:[timeInterval intValue] target:handler selector:@selector(removeLocked) userInfo:nil repeats:NO];
-		[lockRemover setAssociatedObject:currentlyOpening];
-	}
+		DebugLog(@"onceRespring is %i", onceRespring);
+		if (onceRespring) {
+			[lockedApps removeObject:currentlyOpening];
+			[oncePerRespring addObject:currentlyOpening];
+		}
+		if (atTime) {
+			[timeLockedApps addObject:currentlyOpening];
+			[lockedApps removeObject:currentlyOpening];
+			NSTimer* lockRemover = [NSTimer scheduledTimerWithTimeInterval:[timeInterval intValue] target:handler selector:@selector(removeLocked) userInfo:nil repeats:NO];
+			[lockRemover setAssociatedObject:currentlyOpening];
+		}	
 			
-	// close the switcher
-	notify_post("com.phillipt.asos.multitaskEscape");
+		// close the switcher
+		notify_post("com.phillipt.asos.multitaskEscape");
 	
-	// dismiss the passcode view
-	[UIView animateWithDuration:0.4 animations:^{
-		handler.passcodeView.statusTitleView.text = @"✓";
-		handler.passcodeView.alpha = 0;
-		handler.blurView.alpha = 0;
-		//[passcodeView removeFromSuperview];
-	}];
+		// dismiss the passcode view
+		[UIView animateWithDuration:0.4 animations:^{
+			handler.passcodeView.statusTitleView.text = @"✓";
+			handler.passcodeView.alpha = 0;
+			handler.blurView.alpha = 0;
+			//[passcodeView removeFromSuperview];
+		}];
 			
-	// continue launching the app
-	[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
+		// continue launching the app
+		[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
 
-	//stop looking for fingerprint
-	if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
+		//stop looking for fingerprint
+		if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
+	}
 }
 
 @end
@@ -465,6 +483,13 @@ BOOL isTouchIDAvailable() {
 	currentlyOpening = bundleID;
 	dispName = [self displayName];
 	
+	DebugLog(@"oncePerRespring is %@", oncePerRespring);
+	if ([oncePerRespring containsObject:bundleID]) {
+		DebugLog(@"App was only locked once per respring, now unlocked");
+		%orig;
+		return;
+	}
+
 	if ([lockedApps containsObject:bundleID] && ![oncePerRespring containsObject:bundleID]) {
 		if (!shouldLaunch) {
 			DebugLog(@"showing pass view...");
@@ -650,10 +675,13 @@ BOOL isTouchIDAvailable() {
 //End Stratos Compatibility ---------------------------------<<<
 
 void touchUnlock() {
-	[handler removePasscodeView];
-	BTTouchIDController* controller = [BTTouchIDController sharedInstance];
-	[[UIApplication sharedApplication] launchApplicationWithIdentifier:controller.idToOpen suspended:NO];
-	[controller stopMonitoring];
+	if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
+		[handler.passcodeView validPassEntered];
+		[handler removePasscodeView];
+		BTTouchIDController* controller = [BTTouchIDController sharedInstance];
+		[[UIApplication sharedApplication] launchApplicationWithIdentifier:controller.idToOpen suspended:NO];
+		[controller stopMonitoring];
+	}
 }
 
 void touchFailed() {

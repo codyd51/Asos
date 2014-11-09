@@ -30,18 +30,26 @@
 			break;
 		case TouchIDMatched:
 			NSLog(@"[Asos] Touched Finger MATCHED :DDDDDDD");
-			notify_post("com.phillipt.asos.touchunlock");
-			notify_post("com.phillipt.asos.prefstouchunlock");
+			//If running in SpringBoard
+			if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
+				notify_post("com.phillipt.asos.touchunlock");
+			}
+			//else we're in preferences
+			else {
+				notify_post("com.phillipt.asos.prefstouchunlock");
+			}
 			[self stopMonitoring];
 			break;
 		case TouchIDMaybeMatched:
 			NSLog(@"[Asos] Touched Finger Maybe Matched");
-			//[handler removePasscodeView];
-			//[[UIApplication sharedApplication] launchApplicationWithIdentifier:self.idToOpen suspended:NO];
-			//[self stopMonitoring];
-			//[handler.passcodeView validPassEntered];
-			notify_post("com.phillipt.asos.touchunlock");
-			notify_post("com.phillipt.asos.prefstouchunlock");
+			//If running in SpringBoard
+			if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
+				notify_post("com.phillipt.asos.touchunlock");
+			}
+			//else we're in preferences
+			else {
+				notify_post("com.phillipt.asos.prefstouchunlock");
+			}
 			[self stopMonitoring]
 			break;
 		case TouchIDNotMatched:
