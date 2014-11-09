@@ -10,6 +10,7 @@
 #import <Preferences/PSSpecifier.h>
 #import <Preferences/PSTableCell.h>
 #import <ManagedConfiguration/MCPasscodeManager.h>
+#import <LocalAuthentication/LocalAuthentication.h>
 #import "Interfaces.h"
 
 #define DEBUG_PREFIX @" [ Asos : Prefs ]"
@@ -70,6 +71,17 @@ __strong AsosListController *controller;
 // Settings Controller
 //
 
+BOOL isTouchIDAvailable() {
+    LAContext *myContext = [[LAContext alloc] init];
+    NSError *authError = nil;
+
+    if (![myContext canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:&authError]) {
+        NSLog(@"%@", [authError localizedDescription]);
+        return NO;
+    }
+    return YES;
+}
+
 void prefsTouchUnlock() {
 	NSLog(@"[Asos] fingerprint valid, unlock Prefs");
 	[controller hidePasscodeAlert];
@@ -102,10 +114,12 @@ void prefsTouchUnlock() {
 		// Show passcode lock alert whenever Preferences resumes from
 		// background straight into Asos settings controller
 		//Seems to be causing bugs, commenting out for now
+		/*
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(applicationEnteredForeground:)
 													 name:UIApplicationWillEnterForegroundNotification
 												   object:nil];
+		*/
 		// listen for keypad to appear/disappear
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(passcodeInputKeypadDidShow)
@@ -227,11 +241,20 @@ void prefsTouchUnlock() {
 	
 	// lazy load passcode view
 	if (!self.passcodeAlert) {
-		self.passcodeAlert = [[UIAlertView alloc] 	initWithTitle:@"Asos"
+		if (isTouchIDAvailable()) {
+			self.passcodeAlert = [[UIAlertView alloc] 	initWithTitle:@"Asos"
 														 message:@"Enter passcode or use Touch ID to access Asos settings"
 														delegate:self
 											   cancelButtonTitle:@"Cancel"
 											   otherButtonTitles:@"Ok", nil];
+		}
+		else {
+			self.passcodeAlert = [[UIAlertView alloc]	initWithTitle:@"Asos"
+														message:@"Enter passcode to access Asos settings"
+														delegate:self
+												cancelButtonTitle:@"Cancel"
+												otherButtonTitles:@"Ok", nil];
+		}
 		
 		[self.passcodeAlert setAlertViewStyle:UIAlertViewStyleSecureTextInput];
 		

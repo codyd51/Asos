@@ -7,6 +7,7 @@
 #import "BTTouchIDController.h"
 #import <objc/runtime.h>
 #import <AudioToolbox/AudioServices.h>
+#import <LocalAuthentication/LocalAuthentication.h>
 #import "Interfaces.h"
 
 #define DEBUG_PREFIX @" [Asos]"
@@ -165,7 +166,16 @@ void dismissToApp() {
 	}
 }
 
+BOOL isTouchIDAvailable() {
+    LAContext *myContext = [[LAContext alloc] init];
+    NSError *authError = nil;
 
+    if (![myContext canEvaluatePolicy:LAPolicyDeviceOwnerAuthenticationWithBiometrics error:&authError]) {
+        NSLog(@"%@", [authError localizedDescription]);
+        return NO;
+    }
+    return YES;
+}
 
 // Classes ----------------------------------------------------------------------
 
@@ -243,7 +253,7 @@ void dismissToApp() {
 		handler.blurView.alpha = 0;
 	}];
 
-	[[BTTouchIDController sharedInstance] stopMonitoring];
+	if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
 }
 - (void)passcodeLockNumberPadBackspaceButtonHit:(id)arg1 {
 	DebugLog0;
@@ -298,7 +308,7 @@ void dismissToApp() {
 	[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
 
 	//stop looking for fingerprint
-	[[BTTouchIDController sharedInstance] stopMonitoring];
+	if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
 }
 
 @end
@@ -322,7 +332,12 @@ void dismissToApp() {
 		
 		// make passcode view ...
 		_passcodeView = [[AsosPasscodeView alloc] init];
-		_passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Touch ID or enter passcode to open blah"];
+		if (isTouchIDAvailable()) {
+			_passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Touch ID or enter passcode to open blah"];
+		}
+		else {
+			 _passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter passcode to open blah"];
+		}
 		DebugLog(@"self.passcodeView = %@", _passcodeView);
 		
 		
@@ -351,13 +366,19 @@ void dismissToApp() {
 	
 	[UIView animateWithDuration:0.4 animations:^{
 		//TODO: Only if Touch ID is allowed
-		self.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Touch ID or enter passcode to open %@", passedDisplayName];
+		if (isTouchIDAvailable()) {
+			self.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Touch ID or enter passcode to open %@", passedDisplayName];
+		}
+		else {
+			self.passcodeView.statusTitleView.text = [NSString stringWithFormat:@"Enter passcode to open %@", passedDisplayName];
+		}
 		self.passcodeView.alpha = 1.0;
 		self.blurView.alpha = 1.0;
 	}];
 
 	BTTouchIDController* sharedBT = [BTTouchIDController sharedInstance];
-	[sharedBT startMonitoring];
+	if (isTouchIDAvailable()) [sharedBT startMonitoring];
+	else NSLog(@"[Asos] TouchID is not allowed on this device");
 	sharedBT.idToOpen = passedID;
 
 }
@@ -372,7 +393,7 @@ void dismissToApp() {
 	[self.passcodeView removeFromSuperview];
 	[self.blurView removeFromSuperview];
 
-	[[BTTouchIDController sharedInstance] stopMonitoring];
+	if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
 }
 - (void)removeLocked {
 	DebugLog0;

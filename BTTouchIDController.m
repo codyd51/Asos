@@ -32,6 +32,7 @@
 			NSLog(@"[Asos] Touched Finger MATCHED :DDDDDDD");
 			notify_post("com.phillipt.asos.touchunlock");
 			notify_post("com.phillipt.asos.prefstouchunlock");
+			[self stopMonitoring];
 			break;
 		case TouchIDMaybeMatched:
 			NSLog(@"[Asos] Touched Finger Maybe Matched");
@@ -41,16 +42,15 @@
 			//[handler.passcodeView validPassEntered];
 			notify_post("com.phillipt.asos.touchunlock");
 			notify_post("com.phillipt.asos.prefstouchunlock");
+			[self stopMonitoring]
 			break;
 		case TouchIDNotMatched:
 			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
 			NSLog(@"[Asos] Touched Finger NOT MATCHED DDDDDDD:");
-			notify_post("com.phillipt.asos.prefstouchunlock");
 			break;
 		case 10:
 			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
 			NSLog(@"[Asos] Touched Finger NOT MATCHED DDDDDDD:");
-			notify_post("com.phillipt.asos.prefstouchunlock");
 			break;
 		default:
 			//log(@"Touched Finger Other Event"); // Unneeded and annoying
