@@ -9,6 +9,7 @@
 #import <AudioToolbox/AudioServices.h>
 #import <LocalAuthentication/LocalAuthentication.h>
 #import "Interfaces.h"
+#define IS_OS_8_OR_LATER [[[UIDevice currentDevice] systemVersion] floatValue] >= 8.0
 
 #define DEBUG_PREFIX @" [Asos]"
 #import "DebugLog.h"
@@ -53,11 +54,12 @@ static id scroller;
 
 static NSString* appToOpen;
 static NSString* bundleID;
-static NSString *currentlyOpening;
+static NSString* currentlyOpening;
 static NSString* dispName ;
 static NSString* settingsPass;
 static NSString* timeInterval;
 static NSString* userPass;
+static NSString* dismissedApp;
 
 static BOOL isFromMulti;
 static BOOL isToMulti;
@@ -69,6 +71,7 @@ static BOOL enabled;
 static BOOL useRealPass;
 static BOOL atTime;
 static BOOL onceRespring;
+static BOOL isIOS8;
 
 // UNDROUPED
 
@@ -157,7 +160,6 @@ void loadPreferences() {
 		DebugLogC(@"setting for settingsPass:%@", settingsPass);
 	}
 	
-	
 	// populate lockedApps array
 	for (NSString *key in [prefs allKeys]) {
 		if ([[prefs objectForKey:key] boolValue]) {
@@ -174,11 +176,17 @@ void dismissToApp() {
 	
 	if (isToMulti) {
 		isUnlocking = NO;
-		[appSlider sliderScroller:scroller itemTapped:indexTapped];
+		if (isIOS8) {
+			[[UIApplication sharedApplication] launchApplicationWithIdentifier:dismissedApp suspended:NO];
+		}
+		else {
+			[appSlider sliderScroller:scroller itemTapped:indexTapped];
+			[appSlider animateDismissalToDisplayIdentifier:appToOpen withCompletion:nil];
+		}
 		isUnlocking = YES;
-		[appSlider animateDismissalToDisplayIdentifier:appToOpen withCompletion:nil];
 		isToMulti = NO;
 	}
+	
 }
 
 BOOL isTouchIDAvailable() {
@@ -299,6 +307,7 @@ BOOL isTouchIDAvailable() {
 		DebugLog(@"...passcode was VALID.");
 
 		DebugLog(@"onceRespring is %i", onceRespring);
+		DebugLog(@"currentlyOpening is %@", currentlyOpening);
 		if (onceRespring) {
 			[lockedApps removeObject:currentlyOpening];
 			[oncePerRespring addObject:currentlyOpening];
@@ -451,7 +460,7 @@ BOOL isTouchIDAvailable() {
 
 // H00KS -----------------------------------------------------------------------
 
-
+%group Main
 %hook SpringBoard
 - (void)applicationDidFinishLaunching:(id)arg1 {
 	DebugLog0;
@@ -549,10 +558,10 @@ BOOL isTouchIDAvailable() {
 	[iconView insertSubview:shade atIndex:0];
 }
 %end
-
+%end
 
 // BEGIN IOS 7 COMPATIBLITY ------------------------------------>>>
-
+%group iOS7
 %hook SBAppSliderController
 - (id)init {
 	DebugLog0;
@@ -598,7 +607,6 @@ BOOL isTouchIDAvailable() {
 }
 %end
 
-
 %hook SBAppSliderSnapshotView
 + (id)appSliderSnapshotViewForApplication:(SBApplication*)application orientation:(int)orientation loadAsync:(BOOL)async withQueue:(id)queue statusBarCache:(id)cache {
 	if([lockedApps containsObject:[application bundleIdentifier]]){
@@ -624,15 +632,99 @@ BOOL isTouchIDAvailable() {
 	return %orig;
 }
 %end
-
+%end
 // END IOS7 COMPATIBILITY ------------------------------------>>>
 
 // BEGIN IOS8 COMPATIBILITY ------------------------------------>>>
+%group iOS8
+%hook SBAppSwitcherController
+- (id)init {
+	DebugLog0;
+	appSlider = %orig;
+	return appSlider;
+}
+- (void)switcherScroller:(id)scroller1 itemTapped:(SBDisplayLayout*)tapped {
+	DebugLog(@"itemTapped = %@", tapped);
+	
+	scroller = scroller1;
+	//indexTapped = tapped;
+	//if (isUnlocking) {
+		isToMulti = YES;
+		SBDisplayItem* item = [tapped.displayItems objectAtIndex:0];
+		appToOpen = item.displayIdentifier;
+		DebugLog(@"appToOpen: %@", appToOpen);
+		
+		NSString* appDisplayName = SBSCopyLocalizedApplicationNameForDisplayIdentifier(appToOpen);
+		if ([lockedApps containsObject:appToOpen]) {
+			//NSLog(@"[Asos] appDisplayName: %@", appDisplayName);
+			//SBApplication* appWithDisplay = [[SBApplication alloc] initWithBundleIdentifier:appToOpen];
+			dismissedApp = appToOpen;
+			currentlyOpening = appToOpen;
+			[handler showPasscodeViewWithBundleID:appToOpen andDisplayName:appDisplayName];
+			/*
+			[appSlider animateDismissalToDisplayIdentifier:@"com.apple.springboard" withCompletion:^{
+			[[%c(SBUIController) sharedInstance] getRidOfAppSwitcher];
+				}];
+			UIAlertView* lockedAlert = [[UIAlertView alloc] initWithTitle:@"Asos" message:@"This app is locked. Please open it from the homescreen to 	input your passcode." delegate:self cancelButtonTitle:@"Ok" otherButtonTitles:nil];
+			[lockedAlert show];
+			return;
+			*/
+		}
+		else {
+			//NSLog(@"[Asos] %@ is not a locked app.", appDisplayName);
+			%orig;
+		}
+	//}
+	//else %orig;
+}
+- (id)_beginAppListAccess { 
+	//DebugLog0;
+	openApps = %orig;
+	//NSLog(@"[Asos] openApps is %@", openApps);
+	return openApps;
+}
+-(id)_flattenedArrayOfDisplayItemsFromDisplayLayouts:(id)arg1 {
+	NSArray* dispIdents = arg1;
+	for (SBDisplayLayout* i in dispIdents) {
+		SBDisplayItem* x = [i.displayItems objectAtIndex:0];
+		if (![openApps containsObject:x.displayIdentifier]) [openApps addObject:x.displayIdentifier];
+	}
+	return %orig;
+}
+-(void)launchAppWithIdentifier:(id)arg1 url:(id)arg2 actions:(id)arg3 {
+	DebugLog0;
+	%orig;
+}
+%end
 
+%hook SBAppSwitcherSnapshotView
++ (id)appSwitcherSnapshotViewForApplication:(SBApplication*)application orientation:(int)orientation loadAsync:(BOOL)async withQueue:(id)queue statusBarCache:(id)cache {
+	if([lockedApps containsObject:[application bundleIdentifier]]){
+		//UIImage* padlockImage = [UIImage imageWithContentsOfFile:@"/Library/Application Support/Asos/padlock.png"];
+		//UIImageView* padlockImageView = [[UIImageView alloc] initWithImage:padlockImage];
 
-
+		UIImageView *snapshot = (UIImageView *)%orig();
+		DebugLog(@"snapshot: %@", snapshot);
+		//UIImage* snapshotImage = snapshot.image;
+		CAFilter *filter = [CAFilter filterWithName:@"gaussianBlur"];
+		[filter setValue:@10 forKey:@"inputRadius"];
+		snapshot.layer.filters = [NSArray arrayWithObject:filter];
+		//[snapshot addSubview:padlockImageView];
+		/*
+		UIGraphicsBeginImageContext(snapshotImage.size);
+		[snapshotImage drawInRect:CGRectMake(0, 0, snapshotImage.size.width, snapshotImage.size.height)];
+		[padlockImage drawInRect:CGRectMake(snapshotImage.size.width - padlockImage.size.width, snapshotImage.size.height - padlockImage.size.height, padlockImage.size.width, padlockImage.size.height)];
+		UIImageView *result = [[UIImageView alloc] initWithImage:UIGraphicsGetImageFromCurrentImageContext()];
+		UIGraphicsEndImageContext();
+		*/
+		return snapshot;
+	}
+	return %orig;
+}
+%end
+%end
 // END IOS 8 COMPATIBLITY ------------------------------------>>>
-
+/*
 // Stratos Compatibility ------------------------------------>>>
 %hook SBUIController
 - (void)activateApplicationAnimated:(id)application {
@@ -673,6 +765,7 @@ BOOL isTouchIDAvailable() {
 }
 %end
 //End Stratos Compatibility ---------------------------------<<<
+*/
 
 void touchUnlock() {
 	if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
@@ -693,6 +786,20 @@ void touchFailed() {
 %ctor {
 	@autoreleasepool {
 		NSLog(@" ASOS init.");
+
+		%init(Main);
+
+		isIOS8 = IS_OS_8_OR_LATER;
+		
+		if (isIOS8) {
+			NSLog(@"[Asos] Running on iOS 8");
+			%init(iOS8);
+		}
+		else {
+			NSLog(@"[Asos] Running on iOS 7");
+			%init(iOS7);
+		}
+		//%init;
 		
 		loadPreferences();
 		
