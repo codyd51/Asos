@@ -698,10 +698,12 @@ BOOL isTouchIDAvailable() {
 %end
 
 %hook SBAppSwitcherSnapshotView
-+ (id)appSwitcherSnapshotViewForApplication:(SBApplication*)application orientation:(int)orientation loadAsync:(BOOL)async withQueue:(id)queue statusBarCache:(id)cache {
-	if([lockedApps containsObject:[application bundleIdentifier]]){
++ (id)appSwitcherSnapshotViewForDisplayItem:(SBDisplayItem*)application orientation:(int)orientation loadAsync:(BOOL)async withQueue:(id)queue statusBarCache:(id)cache {
+	if([lockedApps containsObject:application.displayIdentifier]){
 		//UIImage* padlockImage = [UIImage imageWithContentsOfFile:@"/Library/Application Support/Asos/padlock.png"];
 		//UIImageView* padlockImageView = [[UIImageView alloc] initWithImage:padlockImage];
+
+		DebugLog(@"Found an app which needs to be blurred");
 
 		UIImageView *snapshot = (UIImageView *)%orig();
 		DebugLog(@"snapshot: %@", snapshot);
