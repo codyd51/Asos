@@ -4,10 +4,10 @@ THEOS_BUILD_DIR = Packages
 
 BUNDLE_NAME = Asos
 Asos_CFLAGS = -fobjc-arc
-Asos_FILES = Asos.m ../BTTouchIDController.mm
+Asos_FILES = Asos.m
 Asos_INSTALL_PATH = /Library/PreferenceBundles
 Asos_FRAMEWORKS = UIKit LocalAuthentication
-Asos_PRIVATE_FRAMEWORKS = Preferences CoreGraphics ManagedConfiguration AudioToolBox
+Asos_PRIVATE_FRAMEWORKS = Preferences CoreGraphics ManagedConfiguration AudioToolBox BiometricKit
 Asos_LIBRARIES = applist
 
 include theos/makefiles/common.mk

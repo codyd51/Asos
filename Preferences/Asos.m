@@ -4,13 +4,14 @@
 //  (c) 2014 Phillip Tennen.
 //
 //
-#import "../BTTouchIDController.h"
+#import "BTTouchIDController.h"
 #import <AudioToolbox/AudioServices.h>
 #import <Preferences/PSListController.h>
 #import <Preferences/PSSpecifier.h>
 #import <Preferences/PSTableCell.h>
 #import <ManagedConfiguration/MCPasscodeManager.h>
 #import <LocalAuthentication/LocalAuthentication.h>
+#import <objc/runtime.h>
 #import "Interfaces.h"
 
 #define DEBUG_PREFIX @" [ Asos : Prefs ]"
@@ -34,7 +35,7 @@
 -(void)popRecursivelyToRootController;
 @end
 @interface PSTableCell (Asos)
--(id)initWithStyle:(id)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
+-(id)initWithStyle:(UITableViewCellStyle)arg1 reuseIdentifier:(id)arg2 specifier:(id)arg3;
 @end
 
 @interface AsosListController ()
@@ -89,6 +90,10 @@ void prefsTouchUnlock() {
 
 @implementation AsosListController
 
+-(void)openTwitter {
+
+}
+
 - (id)initForContentSize:(CGSize)size {
 	NSLog(@"[Asos] settings init'd.");
 	self = [super initForContentSize:size];
@@ -114,12 +119,12 @@ void prefsTouchUnlock() {
 		// Show passcode lock alert whenever Preferences resumes from
 		// background straight into Asos settings controller
 		//Seems to be causing bugs, commenting out for now
-		/*
+		
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(applicationEnteredForeground:)
 													 name:UIApplicationWillEnterForegroundNotification
 												   object:nil];
-		*/
+		
 		// listen for keypad to appear/disappear
 		[[NSNotificationCenter defaultCenter] addObserver:self
 												 selector:@selector(passcodeInputKeypadDidShow)
@@ -175,10 +180,12 @@ void prefsTouchUnlock() {
 - (void)applicationEnteredForeground:(id)something {
 	DebugLog0;
 	
+	if (isTouchIDAvailable()) [[objc_getClass("BTTouchIDController") sharedInstance] startMonitoring];
 	[self showPasscodeAlert];
 }
 - (void)dealloc {
 	// un-register for notifications
+	[[objc_getClass("BTTouchIDController") sharedInstance] stopMonitoring];
 	[[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
@@ -270,7 +277,7 @@ void prefsTouchUnlock() {
 	[self.passcodeAlert show];
 
 	//star monitoring Touch ID
-	[[BTTouchIDController sharedInstance] startMonitoring];
+	[[objc_getClass("BTTouchIDController") sharedInstance] startMonitoring];
 
 	[UIView animateWithDuration:0.4 animations:^{
 		self.blurView.alpha = 1.0;
@@ -289,7 +296,7 @@ void prefsTouchUnlock() {
 	self.blurView = nil;
 	self.loginField = nil;
 
-	[[BTTouchIDController sharedInstance] stopMonitoring];
+	[[objc_getClass("BTTouchIDController") sharedInstance] stopMonitoring];
 }
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
 	DebugLog(@"button clicked (%d) from alertView:%@", (int)buttonIndex, alertView);

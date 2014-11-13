@@ -5,7 +5,7 @@ THEOS_BUILD_DIR = Packages
 TWEAK_NAME = Asos
 TWEAK_CODESIGN_FLAGS = -SEntitlements.plist
 Asos_CFLAGS = -fobjc-arc
-Asos_FILES = Tweak.xm BTTouchIDController.mm
+Asos_FILES = Tweak.xm
 Asos_FRAMEWORKS = UIKit CoreGraphics QuartzCore LocalAuthentication
 Asos_PRIVATE_FRAMEWORKS = SpringBoardServices SpringBoardUIServices AudioToolBox AppSupport BiometricKit
 
@@ -14,6 +14,7 @@ Asos_LIBRARIES = applist
 ADDITIONAL_CFLAGS = -I../common
 
 SUBPROJECTS += Preferences
+SUBPROJECTS += BTTouchIDController
 
 include theos/makefiles/common.mk
 include $(THEOS_MAKE_PATH)/tweak.mk

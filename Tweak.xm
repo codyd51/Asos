@@ -28,8 +28,6 @@
 }
 @end
 
-
-
 // Globals
 
 #define kSettingsPath	[NSHomeDirectory() stringByAppendingPathComponent:@"/Library/Preferences/com.phillipt.asos.plist"]
@@ -72,6 +70,7 @@ static BOOL useRealPass;
 static BOOL atTime;
 static BOOL onceRespring;
 static BOOL isIOS8;
+static BOOL isPirated;
 
 // UNDROUPED
 
@@ -276,7 +275,7 @@ BOOL isTouchIDAvailable() {
 		handler.blurView.alpha = 0;
 	}];
 
-	if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
+	if (isTouchIDAvailable()) [[%c(BTTouchIDController) sharedInstance] stopMonitoring];
 }
 - (void)passcodeLockNumberPadBackspaceButtonHit:(id)arg1 {
 	DebugLog0;
@@ -334,7 +333,7 @@ BOOL isTouchIDAvailable() {
 		[[UIApplication sharedApplication] launchApplicationWithIdentifier:bundleID suspended:NO];
 
 		//stop looking for fingerprint
-		if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
+		if (isTouchIDAvailable()) [[%c(BTTouchIDController) sharedInstance] stopMonitoring];
 	}
 }
 
@@ -376,7 +375,40 @@ BOOL isTouchIDAvailable() {
 										NULL,
 										CFNotificationSuspensionBehaviorDeliverImmediately);
 	}
-	return self;
+
+	// This will get the version number
+	const char* cmd = "dpkg-query -s org.thebigboss.asos 2> /dev/null";
+	NSString* output = @"";
+	FILE* fp;
+	const unsigned int sz = 32;
+	char buf[sz];
+
+	fp = popen(cmd, "r");
+	if (fp == NULL) return nil;
+
+	// We're only expecting one line of output so no need for a while loop here
+	if (fgets(buf, sz, fp) != NULL)
+	output = [NSString stringWithCString:buf encoding:NSASCIIStringEncoding];
+
+	cmd = "dpkg-query -s com.phillipt.asos 2> /dev/null";
+	fp = popen(cmd, "r");
+	if(fp == NULL) return nil;
+
+	if (fgets(buf, sz, fp) != NULL)
+		output = [output stringByAppendingString:[NSString stringWithCString:buf encoding:NSASCIIStringEncoding]];
+
+	pclose(fp);
+	if ([output length] == 0) {
+		isPirated = YES;
+		NSLog(@"[Asos] HAS BEEN PIRATED.");
+	}
+	else {
+		isPirated = NO;
+		NSLog(@"[Asos] is running a legitimate copy.");
+	}
+
+	if (isPirated) return nil;
+	else return self;
 }
 - (void)showPasscodeViewWithBundleID:(NSString *)passedID andDisplayName:(NSString *)passedDisplayName {
 	DebugLog(@"showPassView for: %@ [%@]", passedDisplayName, passedID);
@@ -403,7 +435,7 @@ BOOL isTouchIDAvailable() {
 		self.blurView.alpha = 1.0;
 	}];
 
-	BTTouchIDController* sharedBT = [BTTouchIDController sharedInstance];
+	BTTouchIDController* sharedBT = [%c(BTTouchIDController) sharedInstance];
 	if (isTouchIDAvailable()) [sharedBT startMonitoring];
 	else NSLog(@"[Asos] TouchID is not allowed on this device");
 	sharedBT.idToOpen = passedID;
@@ -420,7 +452,7 @@ BOOL isTouchIDAvailable() {
 	[self.passcodeView removeFromSuperview];
 	[self.blurView removeFromSuperview];
 
-	if (isTouchIDAvailable()) [[BTTouchIDController sharedInstance] stopMonitoring];
+	if (isTouchIDAvailable()) [[%c(BTTouchIDController) sharedInstance] stopMonitoring];
 }
 - (void)removeLocked {
 	DebugLog0;
@@ -773,7 +805,7 @@ void touchUnlock() {
 	if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
 		[handler.passcodeView validPassEntered];
 		[handler removePasscodeView];
-		BTTouchIDController* controller = [BTTouchIDController sharedInstance];
+		BTTouchIDController* controller = [%c(BTTouchIDController) sharedInstance];
 		[[UIApplication sharedApplication] launchApplicationWithIdentifier:controller.idToOpen suspended:NO];
 		[controller stopMonitoring];
 	}

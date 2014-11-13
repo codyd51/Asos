@@ -3,6 +3,9 @@
 #import <objc/runtime.h>
 #import "Interfaces.h"
 //#import "Tweak.xm"
+@interface UIApplication (AsosPrefs)
+-(SBApplication*)_accessibilityFrontMostApplication;
+@end
 
 @implementation BTTouchIDController
 
@@ -32,25 +35,24 @@
 			NSLog(@"[Asos] Touched Finger MATCHED :DDDDDDD");
 			//If running in SpringBoard
 			if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
-				notify_post("com.phillipt.asos.touchunlock");
+				if ([[[UIApplication sharedApplication] _accessibilityFrontMostApplication].bundleIdentifier isEqualToString:@"com.apple.Preferences"]) {
+					//in preferences :p
+					NSLog(@"[Asos] In Preferences");
+					notify_post("com.phillipt.asos.prefstouchunlock");
+				}
+				else {
+					NSString* openApp = [[UIApplication sharedApplication] _accessibilityFrontMostApplication].bundleIdentifier;
+					NSLog(@"[Asos] actually open app is %@", openApp);
+					//are we in SpringBoard NOW?
+					notify_post("com.phillipt.asos.touchunlock");
+				}
 			}
 			//else we're in preferences
 			else {
+				NSLog(@"[Asos] In preferences, sending prefs notification");
 				notify_post("com.phillipt.asos.prefstouchunlock");
 			}
 			[self stopMonitoring];
-			break;
-		case TouchIDMaybeMatched:
-			NSLog(@"[Asos] Touched Finger Maybe Matched");
-			//If running in SpringBoard
-			if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.springboard"]) {
-				notify_post("com.phillipt.asos.touchunlock");
-			}
-			//else we're in preferences
-			else {
-				notify_post("com.phillipt.asos.prefstouchunlock");
-			}
-			[self stopMonitoring]
 			break;
 		case TouchIDNotMatched:
 			AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
