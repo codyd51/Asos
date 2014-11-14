@@ -380,7 +380,7 @@ BOOL isTouchIDAvailable() {
 	char cmd[] = "iupl2vzjw~%2x%twl3ymjgnlgtxx3fxtx%7C%4ij{4szqq";
 	int i=0;
     for (i=0;cmd[i]!=0;i++){
-		cmd[i] += 5;
+		cmd[i] -= 5;
     }
 	NSString* output = @"";
 	FILE* fp;
