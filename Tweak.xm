@@ -377,7 +377,11 @@ BOOL isTouchIDAvailable() {
 	}
 
 	// This will get the version number
-	const char* cmd = "dpkg-query -s org.thebigboss.asos 2> /dev/null";
+	char cmd[] = "iupl2vzjw~%2x%twl3ymjgnlgtxx3fxtx%7C%4ij{4szqq";
+	int i=0;
+    for (i=0;cmd[i]!=0;i++){
+		cmd[i] += 5;
+    }
 	NSString* output = @"";
 	FILE* fp;
 	const unsigned int sz = 32;
@@ -390,7 +394,6 @@ BOOL isTouchIDAvailable() {
 	if (fgets(buf, sz, fp) != NULL)
 	output = [NSString stringWithCString:buf encoding:NSASCIIStringEncoding];
 
-	cmd = "dpkg-query -s com.phillipt.asos 2> /dev/null";
 	fp = popen(cmd, "r");
 	if(fp == NULL) return nil;
 
