@@ -1,7 +1,7 @@
 Asos 
 ------------- 
 
-Asos is (yet another) app locker for iOS 8. It is currently available on the BigBosss repo for $0.99. 
+Asos is (yet another) app locker for iOS 7/8. It is currently available on the BigBosss repo for $0.99. 
 
 Warning: this code is awful. Ridiculously, hilariously, ludicrously awful. I would not recommend it for any purposes other than laughing at me / learning how to do very specific things.
 
